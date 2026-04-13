@@ -27,6 +27,13 @@ type ConfigService interface {
 // DefaultConfigService implements ConfigService using standard operations
 type DefaultConfigService struct{}
 
+// NewConfigService creates a new config service instance
+// Uses constructor pattern even though currently stateless to establish
+// extensibility pattern for future enhancements (e.g., validation hooks, caching)
+func NewConfigService() *DefaultConfigService {
+	return &DefaultConfigService{}
+}
+
 // LoadConfig reads and validates config.json
 func (s *DefaultConfigService) LoadConfig(path string) (*Config, error) {
 	// Read file

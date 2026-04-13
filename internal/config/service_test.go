@@ -75,7 +75,7 @@ func TestDefaultConfigService_LoadConfig(t *testing.T) {
 		},
 	}
 
-	svc := &DefaultConfigService{}
+	svc := NewConfigService()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -179,7 +179,7 @@ func TestDefaultConfigService_SaveConfig(t *testing.T) {
 		},
 	}
 
-	svc := &DefaultConfigService{}
+	svc := NewConfigService()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -261,7 +261,7 @@ func TestDefaultConfigService_LoadRuleFile(t *testing.T) {
 		},
 	}
 
-	svc := &DefaultConfigService{}
+	svc := NewConfigService()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -333,7 +333,7 @@ func TestDefaultConfigService_SaveRuleFile(t *testing.T) {
 		},
 	}
 
-	svc := &DefaultConfigService{}
+	svc := NewConfigService()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {

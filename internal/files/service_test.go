@@ -33,7 +33,7 @@ func TestDefaultFileService_ReadFile(t *testing.T) {
 		},
 	}
 
-	svc := &DefaultFileService{}
+	svc := NewFileService()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -105,7 +105,7 @@ func TestDefaultFileService_WriteFile(t *testing.T) {
 		},
 	}
 
-	svc := &DefaultFileService{}
+	svc := NewFileService()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -154,7 +154,7 @@ func TestDefaultFileService_BackupFile(t *testing.T) {
 		},
 	}
 
-	svc := &DefaultFileService{}
+	svc := NewFileService()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -199,7 +199,7 @@ More content`),
 		},
 	}
 
-	svc := &DefaultFileService{}
+	svc := NewFileService()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -346,7 +346,7 @@ More user content`
 		},
 	}
 
-	svc := &DefaultFileService{}
+	svc := NewFileService()
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {

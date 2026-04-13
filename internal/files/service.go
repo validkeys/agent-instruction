@@ -27,6 +27,13 @@ type FileService interface {
 // DefaultFileService implements FileService using standard file operations
 type DefaultFileService struct{}
 
+// NewFileService creates a new file service instance
+// Uses constructor pattern even though currently stateless to establish
+// extensibility pattern for future enhancements (e.g., logging, metrics)
+func NewFileService() *DefaultFileService {
+	return &DefaultFileService{}
+}
+
 // ReadFile reads file content
 func (s *DefaultFileService) ReadFile(path string) ([]byte, error) {
 	content, err := os.ReadFile(path)
