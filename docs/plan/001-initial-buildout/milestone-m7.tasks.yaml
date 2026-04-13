@@ -100,6 +100,13 @@ tasks:
       - [ ] Verify 80% coverage achieved
       - [ ] All tests passing
 
+      **Code Review:**
+      Run golang-design-patterns skill to review test implementations:
+      ```bash
+      /golang-design-patterns internal/*/*_test.go
+      ```
+      Document findings in code-reviews/[yyyy-mm-dd]-{n}.yaml
+
       **Validation:**
       ```bash
       go test ./... -cover

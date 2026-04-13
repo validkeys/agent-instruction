@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "golang-design-patterns": {
+      "source": "samber/cc-skills-golang",
+      "sourceType": "github",
+      "computedHash": "40e05dfa2916cd801f894151d587a93a6969117bf44d8a767e48b2952380adf7"
+    }
+  }
+}

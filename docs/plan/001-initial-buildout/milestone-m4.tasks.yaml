@@ -95,6 +95,13 @@ tasks:
       - [ ] Test symlink handling
       - [ ] All tests passing
 
+      **Code Review:**
+      Run golang-design-patterns skill to review implementation:
+      ```bash
+      /golang-design-patterns internal/builder/discovery.go internal/builder/discovery_test.go
+      ```
+      Document findings in code-reviews/[yyyy-mm-dd]-{n}.yaml
+
       **Validation:**
       ```bash
       go test ./internal/builder -v -run TestDiscovery
@@ -150,6 +157,13 @@ tasks:
       - [ ] Test global + package merge
       - [ ] Test import chains
       - [ ] All tests passing
+
+      **Code Review:**
+      Run golang-design-patterns skill to review implementation:
+      ```bash
+      /golang-design-patterns internal/builder/composition.go internal/builder/composition_test.go
+      ```
+      Document findings in code-reviews/[yyyy-mm-dd]-{n}.yaml
 
       **Validation:**
       ```bash
@@ -207,6 +221,13 @@ tasks:
       - [ ] Test concurrency limits
       - [ ] Run with race detector
       - [ ] All tests passing
+
+      **Code Review:**
+      Run golang-design-patterns skill to review implementation:
+      ```bash
+      /golang-design-patterns internal/builder/parallel.go internal/builder/parallel_test.go
+      ```
+      Document findings in code-reviews/[yyyy-mm-dd]-{n}.yaml
 
       **Validation:**
       ```bash
@@ -271,6 +292,13 @@ tasks:
       - [ ] Test error handling
       - [ ] All tests passing
 
+      **Code Review:**
+      Run golang-design-patterns skill to review implementation:
+      ```bash
+      /golang-design-patterns internal/commands/build.go internal/commands/build_test.go
+      ```
+      Document findings in code-reviews/[yyyy-mm-dd]-{n}.yaml
+
       **Validation:**
       ```bash
       go test ./internal/commands -v -run TestBuild
@@ -320,6 +348,13 @@ tasks:
       - [ ] Test agents framework
       - [ ] Test "both" option
       - [ ] All tests passing
+
+      **Code Review:**
+      Run golang-design-patterns skill to review implementation:
+      ```bash
+      /golang-design-patterns internal/builder/service.go internal/builder/service_test.go
+      ```
+      Document findings in code-reviews/[yyyy-mm-dd]-{n}.yaml
 
       **Validation:**
       ```bash
