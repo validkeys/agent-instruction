@@ -2,6 +2,8 @@ package commands
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -21,10 +23,11 @@ func TestAddCommand(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "valid: rule content without optional flags",
-			args:    []string{"Always validate input"},
-			flags:   map[string]string{},
-			wantErr: false, // Will prompt interactively
+			name:        "requires initialized directory when rule flag omitted",
+			args:        []string{"Always validate input"},
+			flags:       map[string]string{},
+			wantErr:     true,
+			errContains: "not initialized",
 		},
 		{
 			name:        "invalid: no arguments",
@@ -82,6 +85,58 @@ func TestAddCommand(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAddCommandWithInteractiveSelection(t *testing.T) {
+	// Save current directory
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+	defer os.Chdir(originalDir)
+
+	// Create temporary test environment
+	tempDir := t.TempDir()
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("failed to change directory: %v", err)
+	}
+
+	// Set up .agent-instruction structure
+	rulesDir := filepath.Join(tempDir, ".agent-instruction", "rules")
+	if err := os.MkdirAll(rulesDir, 0755); err != nil {
+		t.Fatalf("failed to create rules directory: %v", err)
+	}
+
+	// Create test rule files
+	createFile(t, filepath.Join(rulesDir, "global.json"), `{"instructions":[]}`)
+	createFile(t, filepath.Join(rulesDir, "testing.json"), `{"instructions":[]}`)
+
+	cmd := newAddCmd()
+	cmd.SetArgs([]string{"Test instruction"})
+
+	// Provide interactive input (select option 1: global)
+	var stdin bytes.Buffer
+	stdin.WriteString("1\n")
+	cmd.SetIn(&stdin)
+
+	// Capture output
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+
+	// Execute command
+	err = cmd.Execute()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "Available rule files") {
+		t.Errorf("expected interactive prompt, got: %s", output)
+	}
+	if !strings.Contains(output, "global.json") {
+		t.Errorf("expected target to be global.json, got: %s", output)
 	}
 }
 

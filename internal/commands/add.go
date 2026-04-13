@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -45,7 +47,39 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	title, _ := cmd.Flags().GetString("title")
 	ruleFile, _ := cmd.Flags().GetString("rule")
 
-	// TODO: Implement interactive selection when rule file not specified
+	// If rule file not specified, prompt interactively
+	if ruleFile == "" {
+		// Get current directory
+		baseDir, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("get working directory: %w", err)
+		}
+
+		// Check if initialized
+		rulesDir := filepath.Join(baseDir, ".agent-instruction", "rules")
+		if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
+			return fmt.Errorf("not initialized: run 'agent-instruction init' first")
+		}
+
+		// List available rule files
+		available, err := ListRuleFiles(rulesDir)
+		if err != nil {
+			return fmt.Errorf("list rule files: %w", err)
+		}
+
+		if len(available) == 0 {
+			return fmt.Errorf("no rule files found in %s", rulesDir)
+		}
+
+		// Prompt for selection
+		selected, err := PromptRuleFile(available, cmd.InOrStdin(), cmd.OutOrStdout())
+		if err != nil {
+			return fmt.Errorf("select rule file: %w", err)
+		}
+
+		ruleFile = selected
+	}
+
 	// TODO: Implement service integration to add instruction to file
 	// TODO: Display success message with next steps
 
@@ -54,9 +88,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	if title != "" {
 		fmt.Fprintf(cmd.OutOrStdout(), "Title: %s\n", title)
 	}
-	if ruleFile != "" {
-		fmt.Fprintf(cmd.OutOrStdout(), "Target: %s\n", ruleFile)
-	}
+	fmt.Fprintf(cmd.OutOrStdout(), "Target: %s.json\n", ruleFile)
 
 	return nil
 }
