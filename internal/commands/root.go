@@ -32,6 +32,9 @@ entire project.`,
 	// Global flags can be added here
 	// rootCmd.PersistentFlags().Bool("debug", false, "enable debug output")
 
+	// Register subcommands
+	rootCmd.AddCommand(newInitCmd())
+
 	return rootCmd
 }
 
