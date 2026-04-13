@@ -36,6 +36,7 @@ entire project.`,
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newBuildCmd())
 	rootCmd.AddCommand(newAddCmd())
+	rootCmd.AddCommand(newListCmd())
 
 	return rootCmd
 }
