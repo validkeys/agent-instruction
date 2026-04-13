@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -110,8 +111,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 
 	// Build packages
 	start := time.Now()
-	successCount := 0
-	errorCount := 0
+	var successCount, errorCount atomic.Int32
 
 	// Process function for each package
 	processPackage := func(ctx context.Context, pkgPath string) error {
@@ -155,15 +155,26 @@ func runBuild(cmd *cobra.Command, args []string) error {
 			// Read existing file if it exists
 			var existingContent *files.ManagedContent
 			if existingData, err := os.ReadFile(outputPath); err == nil {
-				existingContent, _ = files.ParseManagedContent(string(existingData))
+				existingContent, err = files.ParseManagedContent(string(existingData))
+				if err != nil {
+					relPath, _ := filepath.Rel(baseDir, outputPath)
+					return fmt.Errorf("parse existing file %s: %w", relPath, err)
+				}
 			}
 
 			// Build file with managed sections
 			finalContent := builder.BuildManagedFile(generatedContent, existingContent)
 
+			// Ensure output directory exists
+			outputDir := filepath.Dir(outputPath)
+			if err := os.MkdirAll(outputDir, 0755); err != nil {
+				return fmt.Errorf("create directory: %w", err)
+			}
+
 			// Write to file
+			relPath, _ := filepath.Rel(baseDir, outputPath)
 			if err := os.WriteFile(outputPath, []byte(finalContent), 0644); err != nil {
-				return fmt.Errorf("write %s: %w", filename, err)
+				return fmt.Errorf("write %s: %w", relPath, err)
 			}
 
 			if verbose {
@@ -171,6 +182,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 			}
 		}
 
+		successCount.Add(1)
 		return nil
 	}
 
@@ -182,9 +194,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		for _, pkg := range packages {
 			if err := processPackage(ctx, pkg); err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-				errorCount++
-			} else {
-				successCount++
+				errorCount.Add(1)
 			}
 		}
 	} else {
@@ -195,12 +205,8 @@ func runBuild(cmd *cobra.Command, args []string) error {
 
 		if err := builder.ProcessPackagesParallel(ctx, packages, processPackage); err != nil {
 			// ProcessPackagesParallel returns on first error
-			// Count this as one error, successful packages before the error
-			errorCount = 1
-			successCount = len(packages) - 1
+			errorCount.Add(1)
 			fmt.Fprintf(cmd.OutOrStderr(), "Build failed: %v\n", err)
-		} else {
-			successCount = len(packages)
 		}
 	}
 
@@ -208,12 +214,15 @@ func runBuild(cmd *cobra.Command, args []string) error {
 
 	// Print summary
 	fmt.Fprintf(cmd.OutOrStdout(), "\n")
+	success := int(successCount.Load())
+	errors := int(errorCount.Load())
+
 	if dryRun {
 		fmt.Fprintf(cmd.OutOrStdout(), "✓ DRY RUN: Checked %d package(s) in %v\n", len(packages), elapsed.Round(time.Millisecond))
-	} else if errorCount == 0 {
-		fmt.Fprintf(cmd.OutOrStdout(), "✓ Successfully processed %d package(s) in %v\n", successCount, elapsed.Round(time.Millisecond))
+	} else if errors == 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "✓ Successfully processed %d package(s) in %v\n", success, elapsed.Round(time.Millisecond))
 	} else {
-		fmt.Fprintf(cmd.OutOrStdout(), "⚠ Processed %d package(s) with %d error(s) in %v\n", successCount, errorCount, elapsed.Round(time.Millisecond))
+		fmt.Fprintf(cmd.OutOrStdout(), "⚠ Processed %d package(s) with %d error(s) in %v\n", success, errors, elapsed.Round(time.Millisecond))
 		return fmt.Errorf("build completed with errors")
 	}
 
