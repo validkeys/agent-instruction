@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/validkeys/agent-instruction/internal/rules"
 )
 
 func newAddCmd() *cobra.Command {
@@ -80,15 +81,41 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		ruleFile = selected
 	}
 
-	// TODO: Implement service integration to add instruction to file
-	// TODO: Display success message with next steps
-
-	// Placeholder - command structure is valid
-	fmt.Fprintf(cmd.OutOrStdout(), "Rule content: %s\n", ruleContent)
-	if title != "" {
-		fmt.Fprintf(cmd.OutOrStdout(), "Title: %s\n", title)
+	// Get base directory for rules
+	baseDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "Target: %s.json\n", ruleFile)
+
+	rulesDir := filepath.Join(baseDir, ".agent-instruction", "rules")
+
+	// Create services
+	configSvc := rules.NewFileConfigService(rulesDir)
+	ruleSvc := rules.NewRuleService(configSvc)
+
+	// Build instruction
+	instruction := rules.Instruction{
+		Rule: ruleContent,
+	}
+
+	// Add optional heading
+	if title != "" {
+		instruction.Heading = title
+	}
+
+	// Build rule file path
+	ruleFilePath := filepath.Join(rulesDir, ruleFile+".json")
+
+	// Add instruction to rule file
+	if err := ruleSvc.AddInstruction(ruleFilePath, instruction); err != nil {
+		return fmt.Errorf("add instruction: %w", err)
+	}
+
+	// Display success message
+	fmt.Fprintf(cmd.OutOrStdout(), "✓ Added instruction to %s.json\n", ruleFile)
+	fmt.Fprintf(cmd.OutOrStdout(), "\nNext steps:\n")
+	fmt.Fprintf(cmd.OutOrStdout(), "  1. Review the rule file: .agent-instruction/rules/%s.json\n", ruleFile)
+	fmt.Fprintf(cmd.OutOrStdout(), "  2. Run 'agent-instruction build' to regenerate instruction files\n")
 
 	return nil
 }
