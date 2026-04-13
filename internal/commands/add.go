@@ -48,16 +48,16 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	title, _ := cmd.Flags().GetString("title")
 	ruleFile, _ := cmd.Flags().GetString("rule")
 
+	// Get base directory once
+	baseDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
+	}
+	rulesDir := filepath.Join(baseDir, ".agent-instruction", "rules")
+
 	// If rule file not specified, prompt interactively
 	if ruleFile == "" {
-		// Get current directory
-		baseDir, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("get working directory: %w", err)
-		}
-
 		// Check if initialized
-		rulesDir := filepath.Join(baseDir, ".agent-instruction", "rules")
 		if _, err := os.Stat(rulesDir); os.IsNotExist(err) {
 			return fmt.Errorf("not initialized: run 'agent-instruction init' first")
 		}
@@ -80,14 +80,6 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 		ruleFile = selected
 	}
-
-	// Get base directory for rules
-	baseDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("get working directory: %w", err)
-	}
-
-	rulesDir := filepath.Join(baseDir, ".agent-instruction", "rules")
 
 	// Create services
 	configSvc := rules.NewFileConfigService(rulesDir)

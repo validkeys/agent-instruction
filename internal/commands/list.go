@@ -59,7 +59,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Create services
+	// Create service only when we have files to process
 	configSvc := rules.NewFileConfigService(rulesDir)
 
 	// Display each rule file

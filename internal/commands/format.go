@@ -64,7 +64,9 @@ func isTerminal(fd int) bool {
 	return term.IsTerminal(fd)
 }
 
-// IsColorSupported checks if the output supports ANSI color codes
+// IsColorSupported checks if the output supports ANSI color codes.
+// Uses os.Stdout and environment variables directly - tests verify
+// behavior via the isTerminal() wrapper rather than mocking global state.
 func IsColorSupported() bool {
 	// Check if stdout is a terminal
 	if !isTerminal(int(os.Stdout.Fd())) {
@@ -77,8 +79,8 @@ func IsColorSupported() bool {
 	}
 
 	// Check TERM environment variable
-	term := os.Getenv("TERM")
-	if term == "dumb" {
+	termEnv := os.Getenv("TERM")
+	if termEnv == "dumb" {
 		return false
 	}
 
