@@ -359,10 +359,23 @@ func TestResolverWithRealFiles(t *testing.T) {
 // configServiceWrapper implements the minimum interface needed for testing
 type configServiceWrapper struct {
 	loadFunc func(string) (*RuleFile, error)
+	saveFunc func(string, *RuleFile) error
 }
 
 func (c *configServiceWrapper) LoadRuleFile(path string) (*RuleFile, error) {
 	return c.loadFunc(path)
+}
+
+func (c *configServiceWrapper) SaveRuleFile(path string, rule *RuleFile) error {
+	if c.saveFunc != nil {
+		return c.saveFunc(path, rule)
+	}
+	// Default implementation for tests that don't need save
+	data, err := json.MarshalIndent(rule, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
 }
 
 // Helper to write rule files for real file tests
