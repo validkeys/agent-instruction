@@ -1,0 +1,270 @@
+review_date: "2026-04-13"
+review_number: 8
+reviewer: golang-design-patterns
+files_reviewed:
+  - internal/commands/add.go
+  - internal/commands/add_test.go
+  - internal/commands/interactive.go
+  - internal/commands/interactive_test.go
+  - internal/commands/list.go
+  - internal/commands/list_test.go
+  - internal/commands/format.go
+  - internal/commands/format_test.go
+milestone: m5
+task: Add & List Commands
+overall_grade: A-
+
+summary: |
+  M5 implementation is clean, idiomatic Go with excellent testability patterns.
+  All commands follow Cobra best practices, use proper error wrapping, and have
+  comprehensive test coverage. Four minor issues identified - all are efficiency
+  or readability improvements, not correctness problems.
+
+strengths:
+  - Error handling: Consistent use of %w for error wrapping throughout
+  - Testability: io.Reader/Writer injection, cmd.OutOrStdout() usage
+  - String concatenation: Proper strings.Builder usage in FormatList
+  - Early returns: Error cases handled first, happy path minimal indentation
+  - No init(): All initialization explicit, services constructed when needed
+  - Resource management: Simple functions, no cleanup required
+  - Test coverage: Table-driven tests with good edge case coverage
+
+findings:
+  - severity: low
+    category: efficiency
+    location: add.go:54,85
+    title: Duplicate os.Getwd() call
+    status: open
+    description: |
+      Function calls os.Getwd() twice - once at line 54 for interactive
+      mode, then again at line 85. The second call shadows the first
+      variable and performs redundant system call.
+    recommendation: |
+      Option 1: Hoist to top of function before interactive block:
+
+      func runAdd(cmd *cobra.Command, args []string) error {
+          // Get rule content and flags first
+          ruleContent := strings.TrimSpace(args[0])
+          if ruleContent == "" {
+              return fmt.Errorf("rule content cannot be empty")
+          }
+          title, _ := cmd.Flags().GetString("title")
+          ruleFile, _ := cmd.Flags().GetString("rule")
+
+          // Get base directory once
+          baseDir, err := os.Getwd()
+          if err != nil {
+              return fmt.Errorf("get working directory: %w", err)
+          }
+          rulesDir := filepath.Join(baseDir, ".agent-instruction", "rules")
+
+          // Interactive selection uses rulesDir
+          if ruleFile == "" {
+              // ... use rulesDir directly
+          }
+
+          // Service creation uses rulesDir
+          configSvc := rules.NewFileConfigService(rulesDir)
+          // ...
+      }
+
+      Option 2: Reuse first value instead of calling again.
+    impact: Minor - one extra syscall per invocation
+    code_example: |
+      // Before - duplicate call
+      baseDir, err := os.Getwd()  // Line 54
+      // ... interactive logic ...
+      baseDir, err := os.Getwd()  // Line 85 - redundant
+
+      // After - single call
+      baseDir, err := os.Getwd()
+      if err != nil {
+          return fmt.Errorf("get working directory: %w", err)
+      }
+      rulesDir := filepath.Join(baseDir, ".agent-instruction", "rules")
+      // ... use rulesDir throughout
+
+  - severity: low
+    category: efficiency
+    location: list.go:57-63
+    title: Service created before empty check
+    status: open
+    description: |
+      ConfigService is created at line 63 before checking if any rule
+      files exist. If no files exist, function returns early and the
+      service is unused. Minor inefficiency.
+    recommendation: |
+      Move service creation after empty check, before loop:
+
+      if len(ruleFiles) == 0 {
+          fmt.Fprintf(cmd.OutOrStdout(), "No rule files found in %s\n", rulesDir)
+          return nil
+      }
+
+      // Create service only when needed
+      configSvc := rules.NewFileConfigService(rulesDir)
+
+      for i, ruleFileName := range ruleFiles {
+          // ...
+      }
+    impact: Negligible - constructors are lightweight
+    code_example: |
+      // Before
+      configSvc := rules.NewFileConfigService(rulesDir)  // Line 63
+
+      // Display each rule file
+      for i, ruleFileName := range ruleFiles {            // Line 66
+          // ...
+      }
+
+      // After - move to line 65
+      if len(ruleFiles) == 0 {
+          fmt.Fprintf(cmd.OutOrStdout(), "No rule files found in %s\n", rulesDir)
+          return nil
+      }
+
+      configSvc := rules.NewFileConfigService(rulesDir)  // After check
+      for i, ruleFileName := range ruleFiles {
+          // ...
+      }
+
+  - severity: low
+    category: readability
+    location: format.go:80
+    title: Variable shadows package name
+    status: open
+    description: |
+      Variable named 'term' shadows the imported package 'golang.org/x/term'.
+      While technically valid, it's confusing to have 'term' mean two
+      different things in the same file.
+    recommendation: |
+      Rename variable to avoid shadowing:
+
+      // Option 1: termEnv
+      termEnv := os.Getenv("TERM")
+      if termEnv == "dumb" {
+          return false
+      }
+
+      // Option 2: termVar
+      termVar := os.Getenv("TERM")
+      if termVar == "dumb" {
+          return false
+      }
+
+      // Option 3: termType
+      termType := os.Getenv("TERM")
+      if termType == "dumb" {
+          return false
+      }
+    impact: Readability - potentially confusing for code readers
+    code_example: |
+      // Before - shadowing
+      import "golang.org/x/term"
+
+      func IsColorSupported() bool {
+          term := os.Getenv("TERM")  // Shadows package
+          if term == "dumb" {
+              return false
+          }
+          return true
+      }
+
+      // After - clear
+      func IsColorSupported() bool {
+          termEnv := os.Getenv("TERM")
+          if termEnv == "dumb" {
+              return false
+          }
+          return true
+      }
+
+  - severity: low
+    category: testability
+    location: format.go:68-86
+    title: IsColorSupported uses global state
+    status: documented
+    description: |
+      Function directly accesses os.Stdout.Fd() and os.Getenv() making
+      it difficult to test without modifying global state. This is common
+      and acceptable for CLI utilities, but could be more testable.
+    recommendation: |
+      Accept this as-is for CLI utility - global access is reasonable here.
+      Add documentation comment explaining testing approach:
+
+      // IsColorSupported checks if the output supports ANSI color codes.
+      // Uses os.Stdout and environment variables directly - tests verify
+      // via isTerminal() wrapper rather than mocking global state.
+      func IsColorSupported() bool {
+          // ...
+      }
+
+      Alternative (if needed later):
+      Accept fd and getEnv as parameters:
+
+      func IsColorSupportedFor(fd int, getEnv func(string) string) bool {
+          if !isTerminal(fd) {
+              return false
+          }
+          if getEnv("NO_COLOR") != "" {
+              return false
+          }
+          termEnv := getEnv("TERM")
+          if termEnv == "dumb" {
+              return false
+          }
+          return true
+      }
+
+      func IsColorSupported() bool {
+          return IsColorSupportedFor(int(os.Stdout.Fd()), os.Getenv)
+      }
+    impact: Minor - testing requires environment manipulation
+    resolution: |
+      Acceptable as-is for CLI utility. Global state access is reasonable
+      in this context. The isTerminal() wrapper already provides testability
+      for the terminal detection logic.
+
+pattern_adherence:
+  - pattern: Error wrapping with %w
+    status: pass
+    notes: Consistent throughout all files
+  - pattern: Early returns
+    status: pass
+    notes: All error cases handled first
+  - pattern: No init()
+    status: pass
+    notes: All initialization explicit
+  - pattern: strings.Builder for concatenation
+    status: pass
+    notes: Used correctly in FormatList
+  - pattern: Testable I/O
+    status: pass
+    notes: io.Reader/Writer injection, cmd.OutOrStdout()
+  - pattern: Resource cleanup with defer
+    status: pass
+    notes: No resources requiring cleanup
+  - pattern: Avoid code repetition
+    status: minor_issue
+    notes: Duplicate os.Getwd() call in add.go
+
+test_coverage:
+  - All commands have table-driven tests
+  - Error cases properly tested
+  - Edge cases covered (empty lists, invalid input)
+  - Integration tests verify end-to-end behavior
+  - Mock injection used for interactive I/O
+
+recommendations:
+  priority_1_fix_now: []
+  priority_2_next_refactor:
+    - Eliminate duplicate os.Getwd() in add.go
+    - Rename 'term' variable in format.go to avoid shadowing
+    - Move configSvc creation in list.go after empty check
+  priority_3_document:
+    - Add comment to IsColorSupported() explaining testing approach
+
+conclusion: |
+  Excellent implementation following Go best practices. All issues are minor
+  improvements to efficiency and readability - no correctness problems found.
+  Code is production-ready and would pass most code reviews without changes.
