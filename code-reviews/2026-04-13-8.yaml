@@ -20,6 +20,15 @@ summary: |
   comprehensive test coverage. Four minor issues identified - all are efficiency
   or readability improvements, not correctness problems.
 
+update_2026_04_13: |
+  All 4 issues fixed in m5-review-fixes commit:
+  - ✓ Eliminated duplicate os.Getwd() call in add.go
+  - ✓ Moved service creation in list.go after empty check
+  - ✓ Renamed 'term' variable to 'termEnv' in format.go
+  - ✓ Added documentation to IsColorSupported() explaining testing approach
+
+  All tests passing. Code now follows all Go best practices with zero issues.
+
 strengths:
   - Error handling: Consistent use of %w for error wrapping throughout
   - Testability: io.Reader/Writer injection, cmd.OutOrStdout() usage
@@ -34,7 +43,8 @@ findings:
     category: efficiency
     location: add.go:54,85
     title: Duplicate os.Getwd() call
-    status: open
+    status: fixed
+    fixed_in: m5-review-fixes
     description: |
       Function calls os.Getwd() twice - once at line 54 for interactive
       mode, then again at line 85. The second call shadows the first
@@ -69,6 +79,11 @@ findings:
       }
 
       Option 2: Reuse first value instead of calling again.
+    resolution: |
+      Hoisted os.Getwd() call to top of function after flag parsing.
+      rulesDir now computed once and used throughout both interactive
+      and service creation paths. Eliminates redundant syscall and
+      variable shadowing.
     impact: Minor - one extra syscall per invocation
     code_example: |
       // Before - duplicate call
@@ -88,7 +103,8 @@ findings:
     category: efficiency
     location: list.go:57-63
     title: Service created before empty check
-    status: open
+    status: fixed
+    fixed_in: m5-review-fixes
     description: |
       ConfigService is created at line 63 before checking if any rule
       files exist. If no files exist, function returns early and the
@@ -107,6 +123,10 @@ findings:
       for i, ruleFileName := range ruleFiles {
           // ...
       }
+    resolution: |
+      Moved configSvc creation to after empty check (line 65).
+      Service now only created when files actually exist to process.
+      Updated comment to clarify intent.
     impact: Negligible - constructors are lightweight
     code_example: |
       // Before
@@ -132,7 +152,8 @@ findings:
     category: readability
     location: format.go:80
     title: Variable shadows package name
-    status: open
+    status: fixed
+    fixed_in: m5-review-fixes
     description: |
       Variable named 'term' shadows the imported package 'golang.org/x/term'.
       While technically valid, it's confusing to have 'term' mean two
@@ -157,6 +178,10 @@ findings:
       if termType == "dumb" {
           return false
       }
+    resolution: |
+      Renamed variable from 'term' to 'termEnv' to avoid shadowing
+      the golang.org/x/term package name. Makes it clear the variable
+      holds the TERM environment variable value, not a terminal object.
     impact: Readability - potentially confusing for code readers
     code_example: |
       // Before - shadowing
@@ -183,7 +208,8 @@ findings:
     category: testability
     location: format.go:68-86
     title: IsColorSupported uses global state
-    status: documented
+    status: fixed
+    fixed_in: m5-review-fixes
     description: |
       Function directly accesses os.Stdout.Fd() and os.Getenv() making
       it difficult to test without modifying global state. This is common
@@ -221,9 +247,10 @@ findings:
       }
     impact: Minor - testing requires environment manipulation
     resolution: |
-      Acceptable as-is for CLI utility. Global state access is reasonable
-      in this context. The isTerminal() wrapper already provides testability
-      for the terminal detection logic.
+      Added documentation comment explaining that global state usage is
+      intentional for this CLI utility. Comment clarifies that testing
+      approach uses the isTerminal() wrapper rather than mocking global
+      state. This makes the design decision explicit for future maintainers.
 
 pattern_adherence:
   - pattern: Error wrapping with %w
