@@ -1,0 +1,12 @@
+{
+  "title": "Simple Rules",
+  "instructions": [
+    {
+      "rule": "Always use error wrapping with fmt.Errorf and %w"
+    },
+    {
+      "heading": "Testing",
+      "rule": "Use table-driven tests with map[string]struct"
+    }
+  ]
+}
