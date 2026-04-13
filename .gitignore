@@ -44,3 +44,7 @@ coverage.html
 # Temporary files
 *.tmp
 *.log
+
+# Claude Code local settings
+.agents/
+.claude/
