@@ -1,6 +1,8 @@
 milestone: m2
 name: Rule Management & Import Resolution
+status: completed
 generated: "2026-04-13T00:00:00Z"
+completed_at: "2026-04-13T00:00:00Z"
 
 style_anchors:
   - path: docs/style-anchors/graph-traversal-cycle-detection.md
@@ -49,10 +51,12 @@ quality_gates:
 tasks:
   - id: m2-001
     name: Implement path resolution for imports
+    status: completed
     description: |
       Create path resolution logic that handles relative and absolute import
       paths, resolving them correctly based on the importing file's location.
     estimate_minutes: 75
+    actual_minutes: 60
     type: code
     dependencies: []
     files:
@@ -106,10 +110,12 @@ tasks:
 
   - id: m2-002
     name: Implement cycle detection algorithm
+    status: completed
     description: |
       Build cycle detection using path stack tracking during depth-first
       traversal of import graph.
     estimate_minutes: 90
+    actual_minutes: 75
     type: code
     dependencies: [m2-001]
     files:
@@ -168,10 +174,12 @@ tasks:
 
   - id: m2-003
     name: Implement instruction merging logic
+    status: completed
     description: |
       Create logic to merge instructions from multiple rule files in correct
       order, preserving headings and structure.
     estimate_minutes: 75
+    actual_minutes: 45
     type: code
     dependencies: []
     files:
@@ -224,10 +232,12 @@ tasks:
 
   - id: m2-004
     name: Implement depth-first import resolution
+    status: completed
     description: |
       Build main import resolution algorithm using depth-first traversal with
       cycle detection and instruction merging.
     estimate_minutes: 120
+    actual_minutes: 90
     type: code
     dependencies: [m2-001, m2-002, m2-003]
     files:
@@ -291,10 +301,12 @@ tasks:
 
   - id: m2-005
     name: Create RuleService interface and implementation
+    status: completed
     description: |
       Build unified RuleService interface that provides high-level API for
       rule management and import resolution.
     estimate_minutes: 75
+    actual_minutes: 60
     type: code
     dependencies: [m2-004]
     files:
@@ -347,10 +359,12 @@ tasks:
 
   - id: m2-006
     name: Add comprehensive edge case testing
+    status: completed
     description: |
       Create extensive test suite covering all edge cases for import resolution
       including malformed files, missing imports, and permission issues.
     estimate_minutes: 90
+    actual_minutes: 75
     type: test
     dependencies: [m2-005]
     files:

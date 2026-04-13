@@ -7,9 +7,9 @@ import (
 
 // Sentinel errors for rule validation
 var (
-	ErrTitleRequired       = errors.New("rule title is required")
+	ErrTitleRequired        = errors.New("rule title is required")
 	ErrInstructionsRequired = errors.New("must contain at least one instruction")
-	ErrRuleTextRequired    = errors.New("rule text is required")
+	ErrRuleTextRequired     = errors.New("rule text is required")
 )
 
 // RuleFile represents a rule file (.agent-instruction/rules/*.json)
