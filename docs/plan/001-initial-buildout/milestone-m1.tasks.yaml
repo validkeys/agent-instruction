@@ -1,5 +1,7 @@
 milestone: m1
 name: File & Config Services
+status: completed
+completed_date: "2026-04-13T00:00:00Z"
 generated: "2026-04-13T00:00:00Z"
 
 style_anchors:
@@ -49,6 +51,8 @@ quality_gates:
 tasks:
   - id: m1-001
     name: Implement managed section parser
+    status: completed
+    commit: cd7a7a0
     description: |
       Create parser for HTML comment markers that identifies managed sections
       in existing instruction files and extracts user content.
@@ -114,6 +118,8 @@ tasks:
 
   - id: m1-002
     name: Implement backup file creation
+    status: completed
+    commit: df0f0dd
     description: |
       Create service for backing up existing files before modification,
       with proper error handling and permission preservation.
@@ -173,6 +179,8 @@ tasks:
 
   - id: m1-003
     name: Implement atomic file write service
+    status: completed
+    commit: 69b43e1
     description: |
       Create atomic write functionality using temp files to prevent corruption
       on interruption or failure.
@@ -228,6 +236,8 @@ tasks:
 
   - id: m1-004
     name: Create unified file service interface
+    status: completed
+    commit: 0c8c1ed
     description: |
       Build FileService interface and implementation that combines managed
       sections, backups, and atomic writes into a cohesive API.
@@ -286,6 +296,8 @@ tasks:
 
   - id: m1-005
     name: Implement config service for JSON operations
+    status: completed
+    commit: e80d4e0
     description: |
       Create ConfigService for reading, writing, and validating JSON
       configuration files with proper error handling.
@@ -345,6 +357,8 @@ tasks:
 
   - id: m1-006
     name: Add path validation and security checks
+    status: completed
+    commit: 67a24b9
     description: |
       Implement path validation to prevent directory traversal attacks and
       ensure all paths stay within expected directories.
@@ -352,11 +366,9 @@ tasks:
     type: code
     dependencies: [m1-004, m1-005]
     files:
-      modify:
-        - internal/files/service.go
-        - internal/files/service_test.go
-        - internal/config/service.go
-        - internal/config/service_test.go
+      create:
+        - internal/files/validation.go
+        - internal/files/validation_test.go
     instructions: |
       **Objective:**
       Add security validations to prevent path traversal attacks

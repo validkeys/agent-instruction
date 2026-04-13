@@ -18,6 +18,8 @@ meta:
 milestones:
   - id: m0
     name: Foundation & Core Infrastructure
+    status: completed
+    completed_date: "2026-04-13"
     description: |
       Establish project foundation with Go modules, Cobra CLI framework, and core data structures.
       Creates the basic project layout following Go best practices and defines all data models
@@ -34,6 +36,8 @@ milestones:
 
   - id: m1
     name: File & Config Services
+    status: completed
+    completed_date: "2026-04-13"
     description: |
       Implement file operations service with managed section handling, backup creation,
       and atomic writes. Build configuration service for JSON parsing and validation.
