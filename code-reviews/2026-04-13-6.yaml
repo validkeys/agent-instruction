@@ -1,0 +1,222 @@
+review_date: "2026-04-13"
+review_number: 6
+reviewer: golang-design-patterns
+files_reviewed:
+  - internal/builder/parallel.go
+  - internal/builder/parallel_test.go
+milestone: m4-003
+task: Add parallel package processing
+
+summary: |
+  Implementation demonstrates good understanding of Go concurrency patterns
+  (errgroup, semaphore, atomic operations) but has a critical issue: missing
+  context parameter prevents cancellation and timeout support. This must be
+  fixed before production use.
+
+findings:
+  - severity: high
+    category: cancellation
+    location: parallel.go:13
+    title: Missing context parameter prevents cancellation
+    description: |
+      Function uses context.Background() internally but doesn't accept a context
+      parameter. This makes it impossible to cancel long-running operations or
+      apply timeouts. Each goroutine creates its own uncancellable context.
+    recommendation: |
+      Add context.Context as first parameter:
+
+      func ProcessPackagesParallel(ctx context.Context, packages []string,
+                                    processor func(string) error) error {
+          // ...
+          for _, pkg := range packages {
+              pkg := pkg
+              g.Go(func() error {
+                  if err := sem.Acquire(ctx, 1); err != nil {
+                      return err
+                  }
+                  defer sem.Release(1)
+
+                  if ctx.Err() != nil {
+                      return ctx.Err()
+                  }
+
+                  return processor(pkg)
+              })
+          }
+          return g.Wait()
+      }
+    impact: Critical for production - no way to cancel or timeout operations
+    blocking: true
+
+  - severity: medium
+    category: flexibility
+    location: parallel.go:19
+    title: Hardcoded concurrency multiplier
+    description: |
+      Concurrency is hardcoded as GOMAXPROCS * 2. This may not be appropriate
+      for all workloads. CPU-bound work benefits from lower multipliers,
+      I/O-bound work can handle higher multipliers.
+    recommendation: |
+      Use functional options pattern to allow customization:
+
+      type ProcessOption func(*processConfig)
+
+      func WithMaxConcurrency(n int) ProcessOption {
+          return func(cfg *processConfig) {
+              cfg.maxConcurrency = n
+          }
+      }
+
+      func ProcessPackagesParallel(ctx context.Context, packages []string,
+                                    processor func(string) error,
+                                    opts ...ProcessOption) error {
+          cfg := &processConfig{
+              maxConcurrency: runtime.GOMAXPROCS(0) * 2, // default
+          }
+          for _, opt := range opts {
+              opt(cfg)
+          }
+          // ... use cfg.maxConcurrency
+      }
+    impact: Limits flexibility for different workload types
+
+  - severity: medium
+    category: cancellation
+    location: parallel.go:13
+    title: Processor function signature lacks context
+    description: |
+      The processor function doesn't receive a context, so individual package
+      processors can't respond to cancellation or apply their own timeouts.
+    recommendation: |
+      Change processor signature to accept context:
+
+      processor func(context.Context, string) error
+
+      Then pass context to processor:
+
+      if err := processor(ctx, pkg); err != nil {
+          return fmt.Errorf("process package %s: %w", pkg, err)
+      }
+    impact: Prevents fine-grained cancellation control within processors
+    code_example: |
+      // Better API allows processors to respect cancellation
+      func buildPackage(ctx context.Context, pkg string) error {
+          if ctx.Err() != nil {
+              return ctx.Err()
+          }
+          // ... long-running work that checks ctx periodically
+      }
+
+  - severity: low
+    category: documentation
+    location: parallel.go:13
+    title: Missing function documentation
+    description: |
+      Function lacks doc comment explaining behavior, concurrency limits,
+      and error handling semantics.
+    recommendation: |
+      Add comprehensive doc comment:
+
+      // ProcessPackagesParallel processes packages concurrently with bounded parallelism.
+      // Concurrency is limited to GOMAXPROCS * 2 by default. Processing stops on first error,
+      // but other goroutines may complete before the error is returned.
+      //
+      // The processor function is called once per package. If any processor returns an error,
+      // ProcessPackagesParallel returns that error after all goroutines complete.
+      //
+      // Context cancellation will stop new processors from starting and cause sem.Acquire
+      // to return immediately, but already-running processors will continue until they
+      // complete or check ctx.Err() themselves.
+    impact: Documentation clarity for API users
+
+  - severity: low
+    category: error_messages
+    location: parallel.go:36-38
+    title: Unhelpful error wrapping for semaphore acquire
+    description: |
+      Error handling for sem.Acquire wraps with "acquire semaphore", but this
+      can only fail if context is cancelled. The wrapper adds no value.
+    recommendation: |
+      Return context error directly:
+
+      if err := sem.Acquire(ctx, 1); err != nil {
+          return err // context.Canceled or context.DeadlineExceeded
+      }
+    impact: Error message clarity
+
+  - severity: low
+    category: test_quality
+    location: parallel_test.go:108-113
+    title: Timing-based test assertions are flaky
+    description: |
+      Test uses elapsed time to infer parallelism, but timing is unreliable
+      on different systems and under load. The test already has reliable
+      maxActive tracking with atomics.
+    recommendation: |
+      Remove timing assertions, rely on maxActive counter:
+
+      if tc.expectParallel {
+          if maxActive <= 1 {
+              t.Errorf("maxActive = %d, expected > 1", maxActive)
+          }
+      }
+    impact: Test flakiness risk on slow CI systems
+
+strengths:
+  - Proper use of errgroup for coordinated goroutine management
+  - Semaphore correctly limits concurrency
+  - Correct loop variable capture with `pkg := pkg` pattern
+  - Excellent test coverage including race detection
+  - Thread-safe test code with atomic operations
+  - All tests pass with race detector (-race flag)
+  - Error wrapping with context in messages
+  - Proper defer for semaphore release
+
+test_coverage:
+  - Successful parallel processing
+  - Single package and empty list edge cases
+  - Error handling and error aggregation
+  - Concurrency verification with atomic counters
+  - Concurrency limit enforcement
+  - Race condition detection
+  - Multiple concurrent errors
+
+concurrency_patterns:
+  good:
+    - Uses errgroup for error coordination
+    - Semaphore limits concurrent execution
+    - Atomic operations for concurrent counter tracking in tests
+    - Proper mutex usage in tests
+    - Loop variable capture prevents closure bugs
+  needs_improvement:
+    - Missing context propagation for cancellation
+    - Processor function can't respond to cancellation
+    - Hardcoded concurrency limit
+
+recommendations:
+  priority_critical:
+    - Add context.Context parameter for cancellation support
+  priority_high:
+    - Change processor signature to accept context
+  priority_medium:
+    - Add functional options for concurrency tuning
+  priority_low:
+    - Add comprehensive function documentation
+    - Simplify error wrapping for semaphore acquire
+    - Remove flaky timing assertions from tests
+
+verdict: needs_revision
+blocking_issues:
+  - Missing context parameter prevents cancellation and timeout support
+notes: |
+  The implementation demonstrates solid understanding of Go concurrency primitives
+  (errgroup, semaphore, atomic operations) and the test coverage is excellent.
+  However, the lack of context support is a critical oversight that must be
+  addressed before this code can be used in production.
+
+  Once context support is added, this will be production-ready. The other
+  improvements (functional options, processor context) are nice-to-haves that
+  improve flexibility but aren't blocking.
+
+  Test quality is high with proper race detection and atomic operation usage.
+  The timing-based assertions should be removed to prevent flakiness.

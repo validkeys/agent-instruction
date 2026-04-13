@@ -1,0 +1,155 @@
+review_date: "2026-04-13"
+review_number: 5
+reviewer: golang-design-patterns
+files_reviewed:
+  - internal/builder/composition.go
+  - internal/builder/composition_test.go
+milestone: m4-002
+task: Implement package config composition
+
+summary: |
+  Code is well-designed and production-ready with good dependency injection,
+  proper error handling, and comprehensive test coverage. Minor improvements
+  suggested for error handling in fileExists helper and test code quality.
+
+findings:
+  - severity: low
+    category: cancellation
+    location: composition.go:13
+    title: Missing context support
+    description: |
+      No context.Context parameter for cancellation. While composition is
+      typically fast, deep import chains could benefit from cancellation,
+      and consistency with other APIs (like DiscoverPackages) is valuable.
+    recommendation: |
+      Add context parameter for consistency:
+
+      func ComposeInstructions(ctx context.Context, globalRulesPath, packageConfigPath string,
+                                ruleSvc rules.RuleService) ([]rules.Instruction, error)
+    impact: Low priority - composition is usually fast
+
+  - severity: medium
+    category: error_handling
+    location: composition.go:40-43
+    title: fileExists could hide errors
+    description: |
+      fileExists returns false for any os.Stat error, including permission
+      denied or I/O errors. This silently skips files that exist but aren't
+      accessible, which could hide real problems.
+    recommendation: |
+      Distinguish between "file doesn't exist" and other errors:
+
+      func checkFile(path string) (exists bool, err error) {
+          _, err = os.Stat(path)
+          if err == nil {
+              return true, nil
+          }
+          if os.IsNotExist(err) {
+              return false, nil
+          }
+          return false, err // Permission denied, I/O error, etc.
+      }
+
+      Then handle the error in ComposeInstructions.
+    impact: Could hide permission or I/O errors in production
+    code_example: |
+      // Better approach
+      if exists, err := checkFile(globalRulesPath); err != nil {
+          return nil, fmt.Errorf("check global rules: %w", err)
+      } else if exists {
+          // resolve...
+      }
+
+  - severity: low
+    category: test_quality
+    location: composition_test.go:195-258
+    title: Manual JSON construction is fragile
+    description: |
+      ruleToJSON manually constructs JSON strings instead of using json.Marshal.
+      This doesn't handle escaping and is error-prone if rule content contains
+      special characters.
+    recommendation: |
+      Use json.MarshalIndent:
+
+      func createRuleFile(t *testing.T, path string, rule *rules.RuleFile) {
+          t.Helper()
+          data, err := json.MarshalIndent(rule, "", "  ")
+          if err != nil {
+              t.Fatalf("marshal rule: %v", err)
+          }
+          if err := os.WriteFile(path, data, 0644); err != nil {
+              t.Fatalf("write rule file %s: %v", path, err)
+          }
+      }
+    impact: Tests work but code is brittle
+
+  - severity: low
+    category: code_duplication
+    location: composition_test.go:429-445
+    title: Redundant string contains implementation
+    description: |
+      Custom contains/stringContains functions reimplement strings.Contains
+      from the standard library.
+    recommendation: |
+      Use strings.Contains directly instead of custom implementation.
+    impact: Unnecessary code to maintain
+
+  - severity: low
+    category: documentation
+    location: composition.go:13
+    title: Missing function documentation
+    description: |
+      ComposeInstructions lacks doc comment explaining merge order and
+      import resolution behavior.
+    recommendation: |
+      Add comprehensive doc comment:
+
+      // ComposeInstructions composes the final instruction set from global and package configs.
+      // Global rules are resolved first (including their imports), followed by package rules
+      // (including their imports). Returns an empty slice if neither config file exists.
+      //
+      // Order of instructions:
+      // 1. Global imports (depth-first)
+      // 2. Global instructions
+      // 3. Package imports (depth-first)
+      // 4. Package instructions
+    impact: Documentation clarity for API users
+
+strengths:
+  - Clean dependency injection with RuleService interface
+  - Proper error wrapping with context in messages
+  - Early returns for error cases
+  - Simple, focused function with single responsibility
+  - Table-driven tests with comprehensive coverage
+  - Good test helper (testConfigService) that implements interface
+  - Tests cover all merge scenarios including complex import chains
+
+test_coverage:
+  - Global rules only
+  - Package rules only
+  - Both global and package rules with correct merge order
+  - Global rules with imports
+  - Package rules with imports
+  - Complex import chains in both
+  - Empty configurations
+  - Neither config exists
+  - Package imports global rules
+
+recommendations:
+  priority_high: []
+  priority_medium:
+    - Improve fileExists to not hide permission/IO errors
+  priority_low:
+    - Add context support for consistency
+    - Use json.Marshal instead of manual JSON construction
+    - Remove redundant string helper functions
+    - Add comprehensive function documentation
+
+verdict: production_ready
+notes: |
+  Implementation follows Go best practices with good separation of concerns.
+  The medium-priority fix (fileExists error handling) would make this more
+  robust for production, but the code is functional and well-tested as-is.
+
+  The composition logic is simple and correct: global first, package second,
+  with proper import resolution delegated to the RuleService.

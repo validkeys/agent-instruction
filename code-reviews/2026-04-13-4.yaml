@@ -1,0 +1,134 @@
+review_date: "2026-04-13"
+review_number: 4
+reviewer: golang-design-patterns
+files_reviewed:
+  - internal/builder/discovery.go
+  - internal/builder/discovery_test.go
+milestone: m4-001
+task: Implement package discovery algorithm
+
+summary: |
+  Code is production-ready with good test coverage and idiomatic Go patterns.
+  Two medium-priority improvements recommended: context support for cancellation
+  and warning/logging for skipped packages.
+
+findings:
+  - severity: low
+    category: complexity
+    location: discovery.go:77-96
+    title: Unnecessary symlink handling code
+    description: |
+      filepath.Walk doesn't follow symlinks by default, making the symlink
+      resolution and cycle detection code unnecessary. This adds complexity
+      without benefit.
+    recommendation: |
+      Remove symlink handling code or document why it's needed. Current
+      implementation works correctly but is defensive coding for a case
+      that won't occur with filepath.Walk.
+    code_example: |
+      // Can simplify to just:
+      if info.Mode()&os.ModeSymlink != 0 {
+          return filepath.SkipDir
+      }
+
+  - severity: medium
+    category: cancellation
+    location: discovery.go (all functions)
+    title: Missing context support for cancellation
+    description: |
+      Long filesystem walks in large monorepos cannot be interrupted.
+      No way for users to cancel the operation.
+    recommendation: |
+      Add context.Context parameter to all discovery functions:
+
+      func DiscoverPackages(ctx context.Context, cfg *config.Config, repoRoot string) ([]string, error)
+      func walkForPackages(ctx context.Context, repoRoot string) ([]string, error)
+
+      Check ctx.Done() periodically during walk.
+    impact: Important for large repositories with millions of files
+
+  - severity: low
+    category: style
+    location: discovery.go:13-18
+    title: Global map could be a slice
+    description: |
+      excludedDirs uses map[string]bool for 4 items. A slice would be
+      simpler with no performance penalty for such small sets.
+    recommendation: |
+      Convert to []string with linear search, or keep as-is (both fine).
+    impact: Stylistic only, current approach is acceptable
+
+  - severity: low
+    category: error_messages
+    location: discovery.go:84,124,140
+    title: Error messages lack path context
+    description: |
+      Error messages don't include the path that caused the failure,
+      making debugging harder.
+    recommendation: |
+      Include paths in error messages:
+      fmt.Errorf("walk directory tree from %s: %w", repoRoot, err)
+    impact: Helpful for debugging
+
+  - severity: low
+    category: documentation
+    location: discovery.go:23
+    title: Undocumented sort behavior
+    description: |
+      DiscoverPackages sorts results but doesn't document this guarantee.
+    recommendation: |
+      Add to doc comment:
+      // Returns packages in sorted order for deterministic results.
+    impact: Documentation clarity
+
+  - severity: medium
+    category: user_experience
+    location: discovery.go:121-146
+    title: Silent failures in manual mode
+    description: |
+      validatePackagePaths silently skips invalid paths with no logging
+      or warnings. Users don't know which packages were skipped or why.
+    recommendation: |
+      Return validation warnings alongside valid paths, or accept a logger
+      interface to report skipped packages:
+
+      type ValidationResult struct {
+          ValidPaths []string
+          Warnings   []string
+      }
+    impact: Important for UX - silent failures confuse users
+
+strengths:
+  - Proper use of table-driven tests with map[string]struct
+  - Correct use of t.Helper() and t.TempDir()
+  - Good error wrapping with fmt.Errorf and %w
+  - Early returns for error cases
+  - Clean function separation and single responsibilities
+  - Comprehensive test coverage including edge cases
+  - Proper handling of excluded directories
+
+test_coverage:
+  - Auto mode discovery with various structures
+  - Manual mode validation
+  - Excluded directory handling (.git, node_modules, etc)
+  - Nested package support
+  - Empty repository handling
+  - Symlink cycle detection
+  - Invalid path filtering
+
+recommendations:
+  priority_high: []
+  priority_medium:
+    - Add context.Context support for cancellation
+    - Add logging/warnings for skipped packages in manual mode
+  priority_low:
+    - Add path context to error messages
+    - Document sort behavior
+    - Simplify or document symlink handling
+    - Consider slice instead of map for excludedDirs
+
+verdict: production_ready
+notes: |
+  Implementation is solid and follows Go best practices. The two medium-priority
+  improvements (context support and skip warnings) would make this more robust
+  for production use, but the code is functional as-is.
