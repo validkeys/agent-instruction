@@ -1,6 +1,16 @@
 package rules
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// Sentinel errors for rule validation
+var (
+	ErrTitleRequired       = errors.New("rule title is required")
+	ErrInstructionsRequired = errors.New("must contain at least one instruction")
+	ErrRuleTextRequired    = errors.New("rule text is required")
+)
 
 // RuleFile represents a rule file (.agent-instruction/rules/*.json)
 type RuleFile struct {
@@ -25,16 +35,16 @@ type Reference struct {
 // Validate checks rule file for required fields
 func (r *RuleFile) Validate() error {
 	if r.Title == "" {
-		return fmt.Errorf("title is required")
+		return fmt.Errorf("%w", ErrTitleRequired)
 	}
 
 	if len(r.Instructions) == 0 {
-		return fmt.Errorf("must contain at least one instruction")
+		return fmt.Errorf("%w", ErrInstructionsRequired)
 	}
 
 	for i, instr := range r.Instructions {
 		if instr.Rule == "" {
-			return fmt.Errorf("instruction %d: rule text is required", i)
+			return fmt.Errorf("instruction %d: %w", i, ErrRuleTextRequired)
 		}
 	}
 

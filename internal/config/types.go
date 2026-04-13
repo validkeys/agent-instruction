@@ -1,6 +1,16 @@
 package config
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// Sentinel errors for config validation
+var (
+	ErrVersionRequired    = errors.New("config version is required")
+	ErrFrameworkRequired  = errors.New("at least one framework is required")
+	ErrInvalidFramework   = errors.New("invalid framework")
+)
 
 // Config represents .agent-instruction/config.json
 type Config struct {
@@ -12,11 +22,11 @@ type Config struct {
 // Validate checks config for required fields and valid values
 func (c *Config) Validate() error {
 	if c.Version == "" {
-		return fmt.Errorf("version is required")
+		return fmt.Errorf("%w", ErrVersionRequired)
 	}
 
 	if len(c.Frameworks) == 0 {
-		return fmt.Errorf("at least one framework is required")
+		return fmt.Errorf("%w", ErrFrameworkRequired)
 	}
 
 	validFrameworks := map[string]bool{
@@ -26,7 +36,7 @@ func (c *Config) Validate() error {
 
 	for _, fw := range c.Frameworks {
 		if !validFrameworks[fw] {
-			return fmt.Errorf("invalid framework: %s (must be 'claude' or 'agents')", fw)
+			return fmt.Errorf("%w: %s (must be 'claude' or 'agents')", ErrInvalidFramework, fw)
 		}
 	}
 

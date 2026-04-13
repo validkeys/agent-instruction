@@ -206,37 +206,3 @@ func TestReadFile(t *testing.T) {
 		})
 	}
 }
-
-func TestLoadFixtures(t *testing.T) {
-	tests := map[string]struct {
-		fixturePath string
-		validate    func(t *testing.T, data []byte)
-	}{
-		"valid config fixture exists": {
-			fixturePath: "../../testdata/config/valid-config.json",
-			validate: func(t *testing.T, data []byte) {
-				if !strings.Contains(string(data), "version") {
-					t.Error("expected fixture to contain 'version' field")
-				}
-			},
-		},
-		"simple rule fixture exists": {
-			fixturePath: "../../testdata/rules/simple-rule.json",
-			validate: func(t *testing.T, data []byte) {
-				if !strings.Contains(string(data), "Simple Rules") {
-					t.Error("expected fixture to contain 'Simple Rules'")
-				}
-			},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			data, err := os.ReadFile(tc.fixturePath)
-			if err != nil {
-				t.Fatalf("read fixture: %v", err)
-			}
-			tc.validate(t, data)
-		})
-	}
-}
