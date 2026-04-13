@@ -9,9 +9,9 @@ import (
 
 // Sentinel errors for config validation
 var (
-	ErrVersionRequired    = errors.New("config version is required")
-	ErrFrameworkRequired  = errors.New("at least one framework is required")
-	ErrInvalidFramework   = errors.New("invalid framework")
+	ErrVersionRequired   = errors.New("config version is required")
+	ErrFrameworkRequired = errors.New("at least one framework is required")
+	ErrInvalidFramework  = errors.New("invalid framework")
 )
 
 // Config represents .agent-instruction/config.json

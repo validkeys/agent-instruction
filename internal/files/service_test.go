@@ -223,11 +223,11 @@ More content`),
 
 func TestDefaultFileService_UpdateManaged(t *testing.T) {
 	tests := map[string]struct {
-		setup       func(t *testing.T) string
-		newContent  string
-		wantErr     bool
-		validate    func(t *testing.T, path string)
-		wantBackup  bool
+		setup      func(t *testing.T) string
+		newContent string
+		wantErr    bool
+		validate   func(t *testing.T, path string)
+		wantBackup bool
 	}{
 		"updates existing managed section with backup": {
 			setup: func(t *testing.T) string {
