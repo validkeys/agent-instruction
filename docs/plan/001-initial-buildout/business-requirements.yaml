@@ -1,0 +1,263 @@
+project: agent-instruction
+version: "1.0.0"
+generated: "2026-04-13T00:00:00Z"
+
+overview:
+  problem: |
+    Managing CLAUDE.md and AGENTS.md files across a monorepo is extremely difficult and error-prone.
+    Developers must manually synchronize changes across multiple packages, remember which files need
+    updates when adding new rules, and often forget to document lessons learned during development
+    sessions. This leads to inconsistent AI behavior across packages and lost knowledge.
+
+  value_proposition: |
+    agent-instruction provides a single source of truth for AI instruction management in monorepos.
+    It centralizes rule definitions, automates propagation across packages, reduces time spent on
+    manual file management, and makes it easy to capture and apply lessons learned during
+    development. The tool eliminates repetitive copy/paste work and ensures consistency across
+    the entire codebase.
+
+  scope:
+    in_scope:
+      - Core CLI commands (init, build, add, list)
+      - Full monorepo support with global and package-level instruction files
+      - Support for both CLAUDE.md and AGENTS.md file formats
+      - JSON-based rule configuration with import system
+      - Automatic backup of existing instruction files
+      - HTML-style comment markers for managed sections
+      - Claude Code skill for AI agent integration
+      - File system-based operation (no external services)
+
+    out_of_scope:
+      - Advanced IDE integrations (VSCode extensions, editor plugins)
+      - AI framework-specific features beyond file generation
+      - Cloud/hosted service or web interface
+      - Cross-platform support (Windows, Linux) in initial version
+      - Database or external service dependencies
+
+personas:
+  - name: Solo Developer
+    description: Individual developer working on personal or small monorepo projects
+    goals:
+      - Maintain consistent AI instruction files across monorepo packages
+      - Quickly capture and apply lessons learned during development sessions
+      - Eliminate time spent on manual synchronization
+      - Build a knowledge base of effective AI instructions
+    pain_points:
+      - Manual copy/paste of changes to multiple CLAUDE.md/AGENTS.md files
+      - Forgetting to update instruction files when discovering new rules
+      - Loss of knowledge when lessons learned aren't documented
+      - Difficulty tracking which files need updates after changes
+      - Inconsistent AI behavior across different packages
+
+use_cases:
+  - name: Initial Monorepo Setup
+    actor: Solo Developer
+    description: |
+      Developer initializes agent-instruction in their monorepo, creating the
+      .agent-instruction folder structure and converting existing files to managed format
+    outcome: |
+      Centralized rule management system in place, existing CLAUDE.md/AGENTS.md files
+      backed up and converted to managed format with markers
+
+  - name: Add New Rule After Discovery
+    actor: Solo Developer
+    description: |
+      While working with an AI agent, developer discovers the AI keeps making the same
+      mistake. They quickly add a new rule using the CLI to prevent future occurrences.
+    outcome: |
+      New rule added to appropriate rule file, ready to be propagated on next build
+
+  - name: Propagate Rule Changes
+    actor: Solo Developer
+    description: |
+      Developer runs build command to update all CLAUDE.md/AGENTS.md files throughout
+      the monorepo with the latest rules from centralized configuration
+    outcome: |
+      All instruction files updated consistently across the monorepo with latest rules
+
+  - name: List Available Rules
+    actor: Solo Developer
+    description: |
+      Developer wants to see what rules are currently defined and which rule files exist
+    outcome: |
+      Clear overview of all rule files and their contents for easy reference
+
+functional_requirements:
+  - id: FR-1
+    category: CLI - Init Command
+    description: |
+      Implement 'agent-instruction init' command that creates .agent-instruction folder
+      structure at repository root, including config.json and rules/global.json files
+    priority: high
+    rationale: Foundation for all other functionality, required for setup
+
+  - id: FR-2
+    category: CLI - Init Command
+    description: |
+      When existing CLAUDE.md/AGENTS.md files are found, create backup files
+      (e.g., CLAUDE.md.backup) before creating fresh managed files with markers
+    priority: high
+    rationale: Prevent data loss and allow recovery of existing instruction content
+
+  - id: FR-3
+    category: CLI - Build Command
+    description: |
+      Implement 'agent-instruction build' command that generates/updates CLAUDE.md and
+      AGENTS.md files from rule configurations, using HTML-style comment markers
+      (<!-- BEGIN AGENT-INSTRUCTION --> and <!-- END AGENT-INSTRUCTION -->)
+    priority: high
+    rationale: Core functionality for propagating rules across monorepo
+
+  - id: FR-4
+    category: CLI - Build Command
+    description: |
+      Support both global (root-level) and package-level agent-instruction.json files,
+      with package files able to import global rules and define local rules
+    priority: high
+    rationale: Enable flexible rule management at different scopes
+
+  - id: FR-5
+    category: CLI - Add Command
+    description: |
+      Implement 'agent-instruction add "Rule content" --title "Title" --rule="rule-file"'
+      command using command-line arguments interface
+    priority: high
+    rationale: Enable quick rule addition during development workflow
+
+  - id: FR-6
+    category: CLI - Add Command
+    description: |
+      Support adding rules to both global and package-level rule files, with
+      interactive selection if --rule flag is omitted
+    priority: medium
+    rationale: Flexibility in targeting specific rule files
+
+  - id: FR-7
+    category: CLI - List Command
+    description: |
+      Implement 'agent-instruction list' command that displays all available rule
+      files and their contents in a readable format
+    priority: medium
+    rationale: Enable easy discovery and review of existing rules
+
+  - id: FR-8
+    category: Configuration Format
+    description: |
+      Support JSON configuration format with title, instructions array (with optional
+      heading, rule, and references), and imports array for including other rule files
+    priority: high
+    rationale: Flexible, structured format for rule definition and composition
+
+  - id: FR-9
+    category: AI Framework Support
+    description: |
+      Support both CLAUDE.md and AGENTS.md file generation based on configuration,
+      allowing projects to specify which AI frameworks they support
+    priority: high
+    rationale: Multi-framework compatibility is a core requirement
+
+  - id: FR-10
+    category: Claude Code Integration
+    description: |
+      Create Claude Code skill that enables AI agents to use agent-instruction
+      commands directly during development sessions
+    priority: high
+    rationale: Enable AI-assisted rule management workflow
+
+non_functional_requirements:
+  performance:
+    - Build command must execute in under 5 seconds for monorepos with up to 50 packages
+    - File operations must be atomic to prevent corruption on interruption
+    - Support for large rule files (up to 10MB) without performance degradation
+
+  usability:
+    - All commands must have clear, helpful output showing what was done
+    - Error messages must be actionable and suggest solutions
+    - CLI should follow standard Unix conventions for flags and arguments
+    - Documentation must include examples for all common use cases
+
+  reliability:
+    - Never overwrite content outside of managed markers
+    - Gracefully handle missing or malformed configuration files
+    - Validate JSON configuration before attempting build
+    - Preserve file permissions and line endings during updates
+
+  maintainability:
+    - Code must be well-documented with clear module boundaries
+    - Use Go's type system for compile-time safety
+    - Include unit tests for all core functionality with table-driven test patterns
+    - Follow Go best practices for CLI tools and standard project layout
+
+success_criteria:
+  - criterion: Eliminate manual copy/paste work
+    metric: Time spent on manual rule synchronization
+    target: Zero time spent on manual copy/paste of rules across packages
+
+  - criterion: Fast rule addition
+    metric: Time to add new rule during development
+    target: Under 30 seconds from discovery to rule addition
+
+  - criterion: Consistent AI behavior
+    metric: Rule consistency across packages
+    target: 100% consistency - all packages always have same global rules
+
+  - criterion: Tool adoption
+    metric: Developer usage
+    target: Tool becomes primary method for managing AI instructions
+
+constraints:
+  technical:
+    - Must work on macOS (only platform targeted in v1.0)
+    - File system-based only (no database or external services)
+    - Must support both CLAUDE.md and AGENTS.md formats
+    - Single binary distribution (Go compiled binary, no runtime dependencies)
+
+  business:
+    - Initial version must be completed in 1-2 weeks
+    - Tool must be free and open source
+    - Must work offline without internet connectivity
+
+  timeline:
+    - Target: 1-2 weeks for MVP with full command set
+    - Must include all four commands: init, build, add, list
+    - Must include Claude Code skill
+
+  budget:
+    - Zero budget - personal/side project
+    - No paid dependencies or services
+
+dependencies:
+  internal:
+    - None - standalone CLI tool
+
+  external:
+    - None - compiled Go binary with no runtime dependencies
+    - Access to file system for reading/writing
+    - Go 1.21+ toolchain only required for building from source
+
+timeline:
+  phase: MVP Development
+  duration: 1-2 weeks
+  milestones:
+    - CLI framework and argument parsing setup
+    - Init command implementation
+    - Build command with global rules support
+    - Build command with package-level rules and imports
+    - Add command implementation
+    - List command implementation
+    - Claude Code skill creation
+    - Documentation and examples
+    - Testing and bug fixes
+
+assumptions:
+  - Users understand monorepo concepts and project structure
+  - Users want centralized management over distributed rule files
+  - Users are comfortable editing JSON configuration files
+  - Users can download and run compiled binaries or have Go toolchain for building from source
+  - Developers work primarily in terminal/CLI environment
+
+risks:
+  - risk: None identified
+    probability: n/a
+    impact: n/a
+    mitigation: Continue monitoring during development

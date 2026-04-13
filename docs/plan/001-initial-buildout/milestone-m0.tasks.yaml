@@ -1,0 +1,341 @@
+milestone: m0
+name: Foundation & Core Infrastructure
+generated: "2026-04-13T00:00:00Z"
+
+style_anchors:
+  - path: docs/style-anchors/cobra-command-structure.md
+    description: |
+      Command structure patterns for Cobra CLI commands including RunE,
+      flag definitions, and output handling.
+  - path: docs/style-anchors/table-driven-testing.md
+    description: |
+      Table-driven test patterns using map[string]struct for test cases,
+      including helper functions and assertion patterns.
+  - path: docs/style-anchors/json-config-handling.md
+    description: |
+      JSON struct definitions, loading/saving patterns, and validation
+      for Config, RuleFile, and Instruction types.
+  - path: docs/style-anchors/error-handling.md
+    description: |
+      Error wrapping with %w, actionable error messages, and validation
+      error patterns.
+
+global_constraints:
+  allowed_patterns:
+    - "Use Cobra CLI framework for all command definitions"
+    - "Follow standard Go project layout (cmd/, internal/, pkg/)"
+    - "Use encoding/json for all JSON operations"
+    - "Define data structures with JSON tags for serialization"
+    - "Use table-driven tests following Cobra patterns"
+  forbidden_patterns:
+    - "Third-party JSON libraries (use encoding/json)"
+    - "Non-standard project layouts"
+    - "Global mutable state"
+    - "Type assertions on external data without validation"
+  tdd_required: true
+  max_task_duration_minutes: 150
+  commit_strategy: "Commit after each task"
+
+quality_gates:
+  - stage: pre-commit
+    commands:
+      - go fmt ./...
+      - go vet ./...
+      - go test ./...
+  - stage: task-completion
+    criteria:
+      - All tests passing
+      - No compilation errors
+      - Code formatted with gofmt
+      - No golangci-lint warnings
+
+tasks:
+  - id: m0-001
+    name: Initialize Go module and project structure
+    description: |
+      Create the initial Go module with proper dependencies and set up the
+      standard Go project directory structure following best practices.
+    estimate_minutes: 45
+    type: config
+    dependencies: []
+    files:
+      create:
+        - go.mod
+        - go.sum
+        - cmd/agent-instruction/main.go
+        - internal/commands/.gitkeep
+        - internal/config/.gitkeep
+        - internal/rules/.gitkeep
+        - internal/files/.gitkeep
+        - internal/builder/.gitkeep
+        - testdata/.gitkeep
+        - .gitignore
+        - Makefile
+    instructions: |
+      **Objective:**
+      Initialize Go module and create standard project structure
+
+      **Implementation Steps:**
+      1. Run `go mod init github.com/yourusername/agent-instruction`
+      2. Add Cobra dependency: `go get github.com/spf13/cobra@latest`
+      3. Add testify dependency: `go get github.com/stretchr/testify@latest`
+      4. Create directory structure:
+         - cmd/agent-instruction/ (main package)
+         - internal/commands/ (Cobra commands)
+         - internal/config/ (configuration management)
+         - internal/rules/ (rule management)
+         - internal/files/ (file operations)
+         - internal/builder/ (build orchestration)
+         - testdata/ (test fixtures)
+      5. Create basic main.go that will invoke root command
+      6. Create .gitignore with Go standard ignores
+      7. Create Makefile with build, test, lint targets
+
+      **Constraints:**
+      - ONLY use standard Go project layout
+      - See: docs/style-anchors/cobra-command-structure.md for command patterns
+      - Use Go 1.21+ module syntax
+
+      **Validation:**
+      ```bash
+      go mod verify
+      go build ./cmd/agent-instruction
+      ```
+      Expected: Module verified, binary builds successfully
+
+    validation:
+      commands:
+        - go mod verify
+        - go build ./cmd/agent-instruction
+      expected_output: "Binary compiles successfully"
+      on_failure: "Check go.mod syntax and dependency versions"
+
+  - id: m0-002
+    name: Define core data structures
+    description: |
+      Create Go structs for Config, RuleFile, Instruction, and PackageConfig
+      with proper JSON tags and validation methods.
+    estimate_minutes: 90
+    type: code
+    dependencies: [m0-001]
+    files:
+      create:
+        - internal/config/types.go
+        - internal/config/types_test.go
+        - internal/rules/types.go
+        - internal/rules/types_test.go
+    instructions: |
+      **Objective:**
+      Define all core data structures matching the configuration format
+
+      **Implementation Steps:**
+      1. Create internal/config/types.go with:
+         - Config struct (version, packages, frameworks fields)
+         - JSON tags for all fields
+         - Validation method: func (c *Config) Validate() error
+      2. Create internal/rules/types.go with:
+         - RuleFile struct (title, instructions, imports)
+         - Instruction struct (heading, rule, references)
+         - Reference struct (title, path)
+         - JSON tags for all fields
+      3. Define PackageConfig struct (imports, instructions)
+      4. Add validation logic for required fields
+      5. Write table-driven tests for each struct
+
+      **Constraints:**
+      - ONLY use encoding/json for JSON operations
+      - All fields must have JSON tags
+      - Validation methods must return descriptive errors
+      - See: docs/style-anchors/json-config-handling.md for struct patterns
+      - See: docs/style-anchors/error-handling.md for validation error messages
+
+      **TDD Checklist:**
+      - [ ] Write failing test for Config validation
+      - [ ] Implement Config struct and validation
+      - [ ] Write failing test for RuleFile parsing
+      - [ ] Implement RuleFile struct
+      - [ ] Write tests for all edge cases
+      - [ ] All tests passing
+
+      **Style Anchor Reference:**
+      See docs/style-anchors/table-driven-testing.md for test structure
+
+      **Validation:**
+      ```bash
+      go test ./internal/config -v
+      go test ./internal/rules -v
+      ```
+      Expected: All tests pass
+
+    validation:
+      commands:
+        - go test ./internal/config -v
+        - go test ./internal/rules -v
+      expected_output: "PASS"
+      on_failure: "Review test failures and fix implementation"
+
+  - id: m0-003
+    name: Implement Cobra root command
+    description: |
+      Create root command with Cobra framework, version flag, and proper
+      command initialization following Cobra best practices.
+    estimate_minutes: 60
+    type: code
+    dependencies: [m0-002]
+    files:
+      create:
+        - internal/commands/root.go
+        - internal/commands/root_test.go
+      modify:
+        - cmd/agent-instruction/main.go
+    instructions: |
+      **Objective:**
+      Set up Cobra root command with proper initialization and version handling
+
+      **Implementation Steps:**
+      1. Create internal/commands/root.go with:
+         - NewRootCmd() function returning *cobra.Command
+         - Root command with Use, Short, Long descriptions
+         - Version flag
+         - PersistentFlags for global options
+      2. Add Execute() function for command execution
+      3. Update cmd/agent-instruction/main.go to call Execute()
+      4. Write tests for root command initialization
+
+      **Constraints:**
+      - ONLY use Cobra framework patterns
+      - See: docs/style-anchors/cobra-command-structure.md for command setup
+      - Use semantic versioning (v1.0.0-dev)
+      - No global mutable state
+
+      **TDD Checklist:**
+      - [ ] Write test for root command creation
+      - [ ] Implement NewRootCmd function
+      - [ ] Write test for version flag
+      - [ ] Add version flag to command
+      - [ ] All tests passing
+
+      **Style Anchor Reference:**
+      See docs/style-anchors/cobra-command-structure.md and table-driven-testing.md
+
+      **Validation:**
+      ```bash
+      go build ./cmd/agent-instruction
+      ./agent-instruction --version
+      ./agent-instruction --help
+      ```
+      Expected: Version displays correctly, help text shows
+
+    validation:
+      commands:
+        - go build ./cmd/agent-instruction
+        - ./agent-instruction --help
+      expected_output: "Help text displays with command description"
+      on_failure: "Check Cobra command initialization"
+
+  - id: m0-004
+    name: Set up testing infrastructure
+    description: |
+      Create test helpers, fixtures, and table-driven test patterns following
+      Cobra testing conventions.
+    estimate_minutes: 60
+    type: test
+    dependencies: [m0-003]
+    files:
+      create:
+        - internal/commands/testhelpers.go
+        - testdata/config/valid-config.json
+        - testdata/config/invalid-config.json
+        - testdata/rules/simple-rule.json
+    instructions: |
+      **Objective:**
+      Establish testing infrastructure and patterns for the entire project
+
+      **Implementation Steps:**
+      1. Create internal/commands/testhelpers.go with:
+         - Test fixture helpers
+         - Command execution helpers
+         - Output capture utilities
+      2. Create test fixtures in testdata/:
+         - valid-config.json (proper config structure)
+         - invalid-config.json (missing required fields)
+         - simple-rule.json (basic rule file)
+      3. Document table-driven test pattern in comments
+      4. Add example tests using fixtures
+
+      **Constraints:**
+      - ONLY use testify/assert for assertions
+      - See: docs/style-anchors/table-driven-testing.md for test patterns
+      - All fixtures must be realistic
+      - Test helpers must be reusable
+
+      **TDD Checklist:**
+      - [ ] Create test fixture structure
+      - [ ] Write test helper functions
+      - [ ] Create example table-driven test
+      - [ ] Verify fixtures are valid JSON
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/... -v
+      ```
+      Expected: All tests pass
+
+    validation:
+      commands:
+        - go test ./internal/... -v
+      expected_output: "PASS"
+      on_failure: "Fix test infrastructure issues"
+
+  - id: m0-005
+    name: Create Makefile and development scripts
+    description: |
+      Build Makefile with targets for common development tasks: build, test,
+      lint, clean, install.
+    estimate_minutes: 45
+    type: config
+    dependencies: [m0-004]
+    files:
+      create:
+        - Makefile
+        - scripts/install.sh
+      modify:
+        - .gitignore
+    instructions: |
+      **Objective:**
+      Provide convenient development workflow automation
+
+      **Implementation Steps:**
+      1. Create Makefile with targets:
+         - build: Compile binary
+         - test: Run all tests with coverage
+         - lint: Run golangci-lint
+         - clean: Remove build artifacts
+         - install: Install binary to /usr/local/bin
+         - help: Display available targets
+      2. Create scripts/install.sh for binary installation
+      3. Update .gitignore to exclude build artifacts
+      4. Add make help output documentation
+
+      **Constraints:**
+      - Use standard Make patterns
+      - All targets must have help text
+      - Cross-platform compatibility where possible
+      - No hardcoded paths (use variables)
+
+      **Validation:**
+      ```bash
+      make help
+      make build
+      make test
+      ```
+      Expected: All targets work correctly
+
+    validation:
+      commands:
+        - make help
+        - make build
+        - make test
+      expected_output: "All make targets execute successfully"
+      on_failure: "Check Makefile syntax and paths"

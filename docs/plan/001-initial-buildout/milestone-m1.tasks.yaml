@@ -1,0 +1,401 @@
+milestone: m1
+name: File & Config Services
+generated: "2026-04-13T00:00:00Z"
+
+style_anchors:
+  - path: docs/style-anchors/file-operations.md
+    description: |
+      File operation patterns including atomic writes, backup creation,
+      managed section parsing, and safe directory creation.
+  - path: docs/style-anchors/json-config-handling.md
+    description: |
+      JSON loading/saving patterns for config files with validation.
+  - path: docs/style-anchors/error-handling.md
+    description: |
+      Error wrapping and actionable error messages for file operations.
+  - path: docs/style-anchors/table-driven-testing.md
+    description: |
+      Testing patterns for file operations including temp directories.
+
+global_constraints:
+  allowed_patterns:
+    - "Use os and io/ioutil for file operations"
+    - "Implement atomic writes with temp files"
+    - "Validate paths to prevent traversal attacks"
+    - "Return descriptive errors with context"
+    - "Use interfaces for testability"
+  forbidden_patterns:
+    - "Direct file overwrites without backup"
+    - "Path operations without validation"
+    - "Hardcoded file paths"
+    - "Silent error handling"
+  tdd_required: true
+  max_task_duration_minutes: 150
+  commit_strategy: "Commit after each task"
+
+quality_gates:
+  - stage: pre-commit
+    commands:
+      - go fmt ./...
+      - go vet ./...
+      - go test ./...
+  - stage: task-completion
+    criteria:
+      - All tests passing
+      - File operations are atomic
+      - Error messages are descriptive
+      - Edge cases handled
+
+tasks:
+  - id: m1-001
+    name: Implement managed section parser
+    description: |
+      Create parser for HTML comment markers that identifies managed sections
+      in existing instruction files and extracts user content.
+    estimate_minutes: 90
+    type: code
+    dependencies: []
+    files:
+      create:
+        - internal/files/managed.go
+        - internal/files/managed_test.go
+      touch_only:
+        - testdata/claude-with-managed.md
+        - testdata/claude-without-managed.md
+    instructions: |
+      **Objective:**
+      Parse instruction files to identify and preserve managed sections
+
+      **Implementation Steps:**
+      1. Define marker constants:
+         - BEGIN_MARKER = "<!-- BEGIN AGENT-INSTRUCTION -->"
+         - END_MARKER = "<!-- END AGENT-INSTRUCTION -->"
+      2. Implement ParseManagedContent(content string) function:
+         - Find BEGIN and END markers
+         - Extract user content before/after managed section
+         - Return ManagedContent struct with: before, managed, after strings
+      3. Implement HasManagedSection(content string) bool
+      4. Handle edge cases:
+         - No markers present
+         - Only BEGIN marker
+         - Only END marker
+         - Multiple marker pairs
+      5. Write table-driven tests for all cases
+
+      **Constraints:**
+      - ONLY use standard library string functions
+      - Preserve all whitespace and formatting
+      - Handle multi-byte characters correctly
+      - Return errors for malformed markers
+      - See: docs/style-anchors/file-operations.md for managed section patterns
+
+      **TDD Checklist:**
+      - [ ] Write test for content with managed section
+      - [ ] Implement ParseManagedContent
+      - [ ] Write test for content without markers
+      - [ ] Handle edge cases
+      - [ ] Test multiline content preservation
+      - [ ] All tests passing
+
+      **Style Anchor Reference:**
+      See docs/style-anchors/file-operations.md and table-driven-testing.md
+
+      **Validation:**
+      ```bash
+      go test ./internal/files -v -run TestParseManagedContent
+      ```
+      Expected: All test cases pass
+
+    validation:
+      commands:
+        - go test ./internal/files -v
+      expected_output: "PASS"
+      on_failure: "Review parser logic and test cases"
+
+  - id: m1-002
+    name: Implement backup file creation
+    description: |
+      Create service for backing up existing files before modification,
+      with proper error handling and permission preservation.
+    estimate_minutes: 60
+    type: code
+    dependencies: []
+    files:
+      create:
+        - internal/files/backup.go
+        - internal/files/backup_test.go
+    instructions: |
+      **Objective:**
+      Safely backup files before modification to prevent data loss
+
+      **Implementation Steps:**
+      1. Implement CreateBackup(filepath string) error function:
+         - Read original file
+         - Get file permissions
+         - Write to filepath + ".backup"
+         - Preserve permissions on backup
+      2. Implement BackupExists(filepath string) bool
+      3. Handle edge cases:
+         - File doesn't exist
+         - Backup already exists (don't overwrite)
+         - Permission denied
+         - Disk full scenarios
+      4. Write tests with temporary files
+
+      **Constraints:**
+      - ONLY create backup if original exists
+      - Never overwrite existing backups
+      - Preserve file permissions exactly
+      - Return detailed errors
+      - See: docs/style-anchors/file-operations.md for backup patterns
+
+      **TDD Checklist:**
+      - [ ] Write test for successful backup
+      - [ ] Implement CreateBackup function
+      - [ ] Test permission preservation
+      - [ ] Test error conditions
+      - [ ] All tests passing
+
+      **Style Anchor Reference:**
+      See docs/style-anchors/file-operations.md and error-handling.md
+
+      **Validation:**
+      ```bash
+      go test ./internal/files -v -run TestCreateBackup
+      ```
+      Expected: Backup created with correct permissions
+
+    validation:
+      commands:
+        - go test ./internal/files -v -run TestBackup
+      expected_output: "PASS"
+      on_failure: "Check file permission handling"
+
+  - id: m1-003
+    name: Implement atomic file write service
+    description: |
+      Create atomic write functionality using temp files to prevent corruption
+      on interruption or failure.
+    estimate_minutes: 90
+    type: code
+    dependencies: [m1-002]
+    files:
+      create:
+        - internal/files/atomic.go
+        - internal/files/atomic_test.go
+    instructions: |
+      **Objective:**
+      Implement atomic writes that prevent partial file corruption
+
+      **Implementation Steps:**
+      1. Implement WriteAtomic(filepath string, content []byte) error:
+         - Create temp file in same directory
+         - Write content to temp file
+         - Sync to disk
+         - Rename temp to target (atomic operation)
+         - Clean up temp on error
+      2. Get original permissions if file exists
+      3. Apply permissions to new file
+      4. Handle platform-specific atomic rename
+      5. Write tests simulating interruption scenarios
+
+      **Constraints:**
+      - ONLY use os.Rename for atomicity
+      - Temp file must be in same directory as target
+      - Clean up temp files on all error paths
+      - Preserve file permissions
+      - See: docs/style-anchors/file-operations.md for atomic write patterns
+
+      **TDD Checklist:**
+      - [ ] Write test for successful atomic write
+      - [ ] Implement WriteAtomic function
+      - [ ] Test permission preservation
+      - [ ] Test cleanup on error
+      - [ ] Test concurrent writes
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/files -v -run TestWriteAtomic
+      ```
+      Expected: All atomicity guarantees maintained
+
+    validation:
+      commands:
+        - go test ./internal/files -v -run TestAtomic
+      expected_output: "PASS"
+      on_failure: "Review atomic write implementation"
+
+  - id: m1-004
+    name: Create unified file service interface
+    description: |
+      Build FileService interface and implementation that combines managed
+      sections, backups, and atomic writes into a cohesive API.
+    estimate_minutes: 75
+    type: code
+    dependencies: [m1-001, m1-002, m1-003]
+    files:
+      create:
+        - internal/files/service.go
+        - internal/files/service_test.go
+    instructions: |
+      **Objective:**
+      Provide unified API for all file operations used by commands
+
+      **Implementation Steps:**
+      1. Define FileService interface with methods:
+         - ReadFile(path string) ([]byte, error)
+         - WriteFile(path string, content []byte) error
+         - BackupFile(path string) error
+         - ParseManaged(content []byte) (*ManagedContent, error)
+         - UpdateManaged(path string, newContent string) error
+      2. Create DefaultFileService struct implementing interface
+      3. Implement UpdateManaged combining all operations:
+         - Read existing file
+         - Parse managed sections
+         - Replace managed content
+         - Create backup if file exists
+         - Atomic write
+      4. Write integration tests for full workflow
+
+      **Constraints:**
+      - Use interface for testability
+      - All operations must be atomic
+      - Errors must include file path context
+      - Never lose user content
+
+      **TDD Checklist:**
+      - [ ] Define FileService interface
+      - [ ] Write test for ReadFile
+      - [ ] Implement DefaultFileService
+      - [ ] Test UpdateManaged workflow
+      - [ ] Test error scenarios
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/files -v
+      ```
+      Expected: All service tests pass
+
+    validation:
+      commands:
+        - go test ./internal/files -v
+      expected_output: "PASS"
+      on_failure: "Check service integration"
+
+  - id: m1-005
+    name: Implement config service for JSON operations
+    description: |
+      Create ConfigService for reading, writing, and validating JSON
+      configuration files with proper error handling.
+    estimate_minutes: 90
+    type: code
+    dependencies: []
+    files:
+      create:
+        - internal/config/service.go
+        - internal/config/service_test.go
+      touch_only:
+        - internal/config/types.go
+    instructions: |
+      **Objective:**
+      Provide service for all configuration file operations
+
+      **Implementation Steps:**
+      1. Define ConfigService interface:
+         - LoadConfig(path string) (*Config, error)
+         - SaveConfig(path string, config *Config) error
+         - LoadRuleFile(path string) (*RuleFile, error)
+         - SaveRuleFile(path string, rule *RuleFile) error
+         - LoadPackageConfig(path string) (*PackageConfig, error)
+      2. Implement DefaultConfigService struct
+      3. Add JSON parsing with detailed error messages
+      4. Add validation after parsing
+      5. Use atomic writes for saving
+      6. Write table-driven tests with testdata fixtures
+
+      **Constraints:**
+      - ONLY use encoding/json
+      - Validate JSON structure after parsing
+      - Return descriptive errors with line numbers if possible
+      - Use atomic writes for all saves
+      - See: docs/style-anchors/json-config-handling.md for JSON patterns
+      - See: docs/style-anchors/error-handling.md for error messages
+
+      **TDD Checklist:**
+      - [ ] Write test for loading valid config
+      - [ ] Implement LoadConfig
+      - [ ] Test invalid JSON handling
+      - [ ] Test validation errors
+      - [ ] Test SaveConfig
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/config -v
+      ```
+      Expected: All config operations work correctly
+
+    validation:
+      commands:
+        - go test ./internal/config -v
+      expected_output: "PASS"
+      on_failure: "Review JSON parsing and validation"
+
+  - id: m1-006
+    name: Add path validation and security checks
+    description: |
+      Implement path validation to prevent directory traversal attacks and
+      ensure all paths stay within expected directories.
+    estimate_minutes: 60
+    type: code
+    dependencies: [m1-004, m1-005]
+    files:
+      modify:
+        - internal/files/service.go
+        - internal/files/service_test.go
+        - internal/config/service.go
+        - internal/config/service_test.go
+    instructions: |
+      **Objective:**
+      Add security validations to prevent path traversal attacks
+
+      **Implementation Steps:**
+      1. Create ValidatePath(path string, baseDir string) error function:
+         - Resolve absolute path
+         - Check if path is within baseDir
+         - Check for suspicious patterns (../, symlinks)
+      2. Add validation to all file operations
+      3. Add tests for attack scenarios:
+         - Relative paths with ../
+         - Absolute paths outside base
+         - Symlink attacks
+      4. Document security assumptions
+
+      **Constraints:**
+      - Validate before any file operation
+      - Return security errors with context
+      - Follow OWASP path traversal prevention
+      - Test all attack vectors
+
+      **TDD Checklist:**
+      - [ ] Write test for path traversal attempt
+      - [ ] Implement ValidatePath
+      - [ ] Add validation to all file ops
+      - [ ] Test legitimate paths still work
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/files -v -run TestValidatePath
+      go test ./internal/config -v -run TestValidatePath
+      ```
+      Expected: All traversal attempts blocked
+
+    validation:
+      commands:
+        - go test ./internal/files -v -run TestValidate
+        - go test ./internal/config -v -run TestValidate
+      expected_output: "PASS"
+      on_failure: "Review security validations"

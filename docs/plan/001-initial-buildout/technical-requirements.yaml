@@ -1,0 +1,602 @@
+project: agent-instruction
+version: "1.0.0"
+generated: "2026-04-13T00:00:00Z"
+business_requirements_ref: ./business-requirements.yaml
+
+architecture:
+  pattern: Modular CLI with Command Pattern
+  description: |
+    Separate command handlers for each CLI command (init, build, add, list) with shared
+    core services for file operations and configuration management. Clean separation of
+    concerns enables easy testing, extension, and maintenance.
+
+    Uses Cobra CLI framework for command routing, flag parsing, and help generation.
+    Core business logic is separated from CLI layer to allow independent testing.
+  components:
+    - name: CLI Layer (Cobra Commands)
+      responsibility: Command routing, flag parsing, user interaction, help text
+    - name: Command Handlers
+      responsibility: Command-specific business logic orchestration
+    - name: Config Service
+      responsibility: Read/write/validate JSON configuration files
+    - name: Rule Service
+      responsibility: Manage rule definitions, imports, and composition
+    - name: File Service
+      responsibility: Atomic file operations with managed section handling
+    - name: Build Service
+      responsibility: Generate CLAUDE.md/AGENTS.md from rule configurations
+
+technology_stack:
+  language: Go
+  runtime: Go 1.21+
+  frameworks:
+    - github.com/spf13/cobra (CLI framework)
+  libraries:
+    core:
+      - encoding/json (standard library for JSON parsing)
+      - os/filepath (standard library for path operations)
+      - io/ioutil (standard library for file I/O)
+    development:
+      - github.com/stretchr/testify (testing assertions)
+  package_manager: Go modules (go.mod)
+  style_reference: /Users/kydavis/Sites/ai-use-repos/cobra
+
+project_structure:
+  type: Single repository
+  layout: |
+    Standard Go project layout with cmd/pkg separation:
+
+    agent-instruction/
+    ├── cmd/
+    │   └── agent-instruction/
+    │       └── main.go              # Application entry point
+    ├── internal/
+    │   ├── commands/                # Cobra command definitions
+    │   │   ├── root.go
+    │   │   ├── init.go
+    │   │   ├── build.go
+    │   │   ├── add.go
+    │   │   └── list.go
+    │   ├── config/                  # Configuration management
+    │   │   ├── config.go
+    │   │   └── config_test.go
+    │   ├── rules/                   # Rule management
+    │   │   ├── rule.go
+    │   │   ├── import.go
+    │   │   └── rules_test.go
+    │   ├── files/                   # File operations
+    │   │   ├── managed.go           # Managed section handling
+    │   │   ├── backup.go
+    │   │   └── files_test.go
+    │   └── builder/                 # Build orchestration
+    │       ├── builder.go
+    │       └── builder_test.go
+    ├── pkg/                         # Public libraries (if needed)
+    ├── testdata/                    # Test fixtures
+    ├── .github/
+    │   └── workflows/
+    │       └── ci.yml               # GitHub Actions workflow
+    ├── .golangci.yml                # Linter configuration
+    ├── go.mod
+    ├── go.sum
+    ├── Makefile                     # Build automation
+    ├── install.sh                   # Installation script
+    └── README.md
+  key_directories:
+    - path: cmd/agent-instruction
+      purpose: Application entry point and main package
+    - path: internal/commands
+      purpose: Cobra command definitions and CLI layer
+    - path: internal/config
+      purpose: Configuration file management and validation
+    - path: internal/rules
+      purpose: Rule definition, import resolution, and composition
+    - path: internal/files
+      purpose: File operations with managed section handling
+    - path: internal/builder
+      purpose: Orchestrates building CLAUDE.md/AGENTS.md files
+    - path: testdata
+      purpose: Test fixtures for unit and integration tests
+
+data_model:
+  strategy: File-based JSON storage
+  database: N/A (file system only)
+  schema_approach: |
+    Define configuration structure using Go structs with JSON tags.
+    Use Go's type system for compile-time safety and runtime validation.
+
+    Key data structures:
+    - Config: Top-level configuration (in .agent-instruction/config.json)
+    - RuleFile: Rule file definition with title, instructions, imports
+    - Instruction: Individual instruction with heading, rule, references
+    - PackageConfig: Package-level configuration (in agent-instruction.json)
+  migrations: Not applicable (file-based storage with versioned schema)
+
+file_formats:
+  config_json:
+    location: .agent-instruction/config.json
+    structure:
+      version: string
+      packages: array of package paths
+      frameworks: array of framework names (claude, agents, etc)
+
+  rule_json:
+    location: .agent-instruction/rules/*.json
+    structure:
+      title: string
+      instructions: array of instruction objects
+      imports: array of rule file paths
+
+  instruction_object:
+    heading: string (optional)
+    rule: string
+    references: array of reference objects (optional)
+      structure:
+        title: string (display name for reference)
+        path: string (file path, relative to repo root or absolute)
+
+  package_config_json:
+    location: packages/*/agent-instruction.json
+    structure:
+      imports: array of rule file paths (relative or absolute)
+      instructions: array of instruction objects (local overrides)
+
+api:
+  style: CLI
+  framework: Cobra
+  versioning: Semantic versioning for binary releases
+  documentation: Command help text via Cobra + README examples
+
+security:
+  authentication:
+    method: None required (local file system tool)
+    implementation: N/A
+  authorization:
+    model: File system permissions
+    implementation: Respect OS-level file permissions, validate before writes
+  secrets:
+    storage: N/A (tool doesn't handle secrets)
+    rotation: N/A
+  data_validation:
+    input: |
+      - Validate JSON structure against Go struct schema
+      - Path traversal prevention: validate all paths stay within expected directories
+      - File permission checks before write operations
+      - Malformed JSON detection and helpful error messages
+    output: |
+      - Generate well-formed markdown with proper escaping
+      - Preserve file permissions during updates
+      - Atomic writes to prevent partial file corruption
+  static_analysis:
+    tool: gosec
+    integration: Run in GitHub Actions on every PR
+    scope: Full security audit including file operations, path handling, input validation
+
+testing:
+  strategy: Test-Driven Development (TDD)
+  types:
+    unit:
+      framework: Go testing package with testify/assert
+      coverage_target: 80%
+      approach: |
+        Table-driven tests for all core logic. Test each component independently:
+        - Config parsing and validation
+        - Rule import resolution
+        - Managed section parsing and replacement
+        - Build logic
+        - Command handler logic (separate from Cobra layer)
+    integration:
+      framework: Go testing package
+      approach: |
+        Test complete workflows end-to-end:
+        - Init command creates proper directory structure
+        - Build command generates correct output files
+        - Add command updates rule files correctly
+        - List command displays all rules
+        Use testdata fixtures for realistic scenarios
+    e2e:
+      framework: Shell scripts or Go tests executing binary
+      approach: |
+        Execute compiled binary in test environments:
+        - Test in empty directory
+        - Test in existing monorepo
+        - Test with existing CLAUDE.md files
+        - Test error scenarios
+  mocking:
+    strategy: Mock file system operations for unit tests using interfaces
+    tools: testify/mock for interface mocking
+
+development:
+  workflow: |
+    1. Write failing test (TDD)
+    2. Implement minimal code to pass test
+    3. Refactor if needed
+    4. Run linter and fix issues
+    5. Commit with descriptive message
+    6. Push and let CI validate
+  code_quality:
+    linter: golangci-lint
+    formatter: gofmt (built into golangci-lint)
+    type_checker: Go compiler
+  pre_commit_hooks:
+    - go fmt ./...
+    - golangci-lint run
+    - go test ./...
+
+ci_cd:
+  platform: GitHub Actions
+  pipeline:
+    - stage: Test
+      actions:
+        - Checkout code
+        - Setup Go 1.21
+        - Download dependencies (go mod download)
+        - Run tests (go test -v -race -coverprofile=coverage.out ./...)
+        - Upload coverage to codecov
+    - stage: Lint
+      actions:
+        - Checkout code
+        - Setup Go 1.21
+        - Run golangci-lint
+    - stage: Security
+      actions:
+        - Checkout code
+        - Setup Go 1.21
+        - Run gosec security scanner
+    - stage: Build
+      actions:
+        - Checkout code
+        - Setup Go 1.21
+        - Build binary (go build -o agent-instruction ./cmd/agent-instruction)
+        - Upload artifact
+
+deployment:
+  target: Local development machines (macOS initially)
+  packaging:
+    format: Single Go binary
+    distribution: |
+      - Direct download of binary from GitHub releases
+      - Install script (install.sh) that copies binary to /usr/local/bin
+      - Users can also: go install github.com/yourusername/agent-instruction/cmd/agent-instruction@latest
+  environments:
+    - name: development
+      config: Local build with 'go build' or 'go run'
+    - name: production
+      config: Released binary built with GitHub Actions
+  release_process:
+    strategy: Semantic Versioning (semver)
+    automation: |
+      - Tag commit with version (e.g., v1.0.0)
+      - GitHub Actions builds binary
+      - Creates GitHub release with binary attachment
+      - Updates README with latest version
+
+monitoring:
+  logging:
+    format: Plain text to stdout/stderr
+    destination: Console output
+    approach: |
+      - Info messages to stdout (success messages, progress)
+      - Error messages to stderr with context
+      - Optional verbose flag for debugging
+  metrics:
+    collection: Not required for MVP
+    visualization: N/A
+  alerts:
+    strategy: Not required (local CLI tool)
+    channels: N/A
+
+performance:
+  targets:
+    response_time: Under 5 seconds for builds with up to 50 packages
+    throughput: Not applicable (single-user CLI)
+    file_operations: Atomic writes must be fast enough for user workflow
+  optimization:
+    strategy: |
+      - Read files in parallel when scanning for packages
+      - Cache parsed configuration to avoid repeated JSON parsing
+      - Minimize file I/O operations
+      - Use efficient string building for markdown generation
+    monitoring: Benchmark tests for critical paths
+
+scalability:
+  approach: Vertical (single machine, single user)
+  limits:
+    concurrent_users: 1 (local CLI tool)
+    data_volume: Up to 50 packages, 100 rule files, 10MB total config
+  bottlenecks:
+    - File I/O for large monorepos
+    - JSON parsing for very large rule files
+
+constraints:
+  technical:
+    - macOS only for v1.0 (Unix-like systems generally)
+    - Requires Go 1.21+ for building from source
+    - File system-based only (no database)
+    - Must support both CLAUDE.md and AGENTS.md formats
+    - HTML comment markers for managed sections
+  operational:
+    - Must work offline without internet connectivity
+    - Must preserve user content outside managed sections
+    - Must never corrupt files on interruption (atomic writes)
+    - Must provide clear error messages for all failure scenarios
+
+dependencies:
+  core:
+    - github.com/spf13/cobra: CLI framework for command routing
+    - github.com/stretchr/testify: Testing utilities and assertions
+
+  development:
+    - golangci-lint: Code quality and linting
+    - gosec: Security scanning
+
+  build_tools:
+    - Go toolchain (1.21+)
+    - Make (optional, for convenience)
+
+trade_offs:
+  - decision: Go instead of TypeScript/Node.js
+    rationale: |
+      Single binary distribution, faster execution, no runtime dependency (Node.js),
+      better suited for CLI tools with excellent Cobra framework support
+    alternative: TypeScript with Node.js (more familiar to web developers)
+    consequence: |
+      + Faster execution
+      + Easier distribution (single binary)
+      + No runtime dependency
+      - Less familiar to JavaScript developers
+      - Smaller ecosystem for some tasks
+    reversibility: Medium (would require full rewrite)
+
+  - decision: File-based storage instead of database
+    rationale: |
+      Aligns with business requirements, simpler architecture, no external dependencies,
+      human-readable configuration, works offline
+    alternative: SQLite or embedded database
+    consequence: |
+      + Simple, no database setup
+      + Human-readable configuration
+      + Works offline
+      - Manual import resolution
+      - No complex queries
+    reversibility: High (could add database layer later)
+
+  - decision: Cobra CLI framework instead of custom parsing
+    rationale: |
+      Industry standard for Go CLIs, automatic help generation, subcommand support,
+      flag parsing, well-tested and maintained
+    alternative: Custom flag parsing with standard library
+    consequence: |
+      + Professional CLI experience
+      + Automatic help generation
+      + Well-documented patterns
+      - Additional dependency
+      - Framework learning curve
+    reversibility: Medium (Cobra is well-abstracted)
+
+  - decision: Atomic writes instead of streaming
+    rationale: |
+      Safer for user data, prevents file corruption on interruption, simpler logic,
+      works well for expected file sizes (< 1MB)
+    alternative: Stream processing with temp files
+    consequence: |
+      + Safer (atomic operations)
+      + Simpler code
+      + Better error recovery
+      - Higher memory usage for large files
+      - Not optimal for very large files
+    reversibility: Medium (could optimize later if needed)
+
+  - decision: Table-driven tests instead of individual test functions
+    rationale: |
+      Go community best practice, easier to add test cases, more maintainable,
+      better test coverage with less code
+    alternative: Individual test functions for each case
+    consequence: |
+      + More test cases with less code
+      + Easier to maintain
+      + Better coverage
+      - Initial learning curve
+      - Less flexibility for complex scenarios
+    reversibility: High (can mix approaches)
+
+  - decision: golangci-lint instead of individual linters
+    rationale: |
+      Runs multiple linters in parallel, configurable, industry standard,
+      faster than running linters separately
+    alternative: Run gofmt, govet, staticcheck separately
+    consequence: |
+      + Comprehensive checks in single tool
+      + Faster (parallel execution)
+      + Easy CI integration
+      - Additional tool to install
+      - Configuration required
+    reversibility: High (can change linting setup easily)
+
+algorithms:
+  package_discovery:
+    description: |
+      Discovers all packages in the monorepo that should receive instruction files.
+      Runs during 'build' command to identify target directories.
+    strategy: Filesystem traversal with configuration-based filtering
+    steps:
+      - Read .agent-instruction/config.json to get packages array
+      - If packages array is empty or contains "auto":
+          - Walk repository tree from root
+          - Look for agent-instruction.json files in subdirectories
+          - Exclude common non-package directories (.git, node_modules, .agent-instruction)
+          - Return all directories containing agent-instruction.json
+      - If packages array contains explicit paths:
+          - Validate each path exists and contains agent-instruction.json
+          - Return validated paths
+          - Warn about missing or invalid paths
+    performance: |
+      - Use parallel directory scanning for large repos
+      - Cache results within a single build invocation
+      - Skip excluded directories early to avoid deep traversal
+    edge_cases:
+      - Empty monorepo: Return empty array, no files generated
+      - Nested packages: Support package-within-package structure
+      - Symlinks: Follow symlinks but detect cycles to prevent infinite loops
+
+  import_resolution:
+    description: |
+      Resolves import chains in rule files, detecting cycles and merging instructions.
+      Used by build command to compose final instruction set for each package.
+    strategy: Depth-first traversal with cycle detection
+    steps:
+      - Start with root rule file (from package or global config)
+      - Initialize visited set and current path stack
+      - For each import path in current file:
+          - Resolve path relative to current file location
+          - If path is in current path stack: cycle detected, return error
+          - If path is in visited set: skip (already processed)
+          - Add path to visited set and path stack
+          - Parse imported file
+          - Recursively resolve its imports
+          - Collect instructions from imported file
+          - Remove path from path stack
+      - Merge collected instructions in import order
+      - Append current file's local instructions
+      - Return merged instruction list
+    cycle_detection:
+      approach: Path stack tracking
+      example: |
+        global.json imports testing.json
+        testing.json imports validation.json
+        validation.json imports testing.json → CYCLE DETECTED
+      error_message: "Import cycle detected: global.json → testing.json → validation.json → testing.json"
+    merge_strategy: |
+      - Instructions are merged in depth-first import order
+      - Local instructions in importing file come after imported instructions
+      - No deduplication (user controls this via import structure)
+      - Heading hierarchy is preserved as-is from each file
+
+  init_interactive_behavior:
+    description: |
+      Defines interactive prompts and decision flow for 'init' command.
+      Handles existing file detection and user choices.
+    workflow:
+      - Check if .agent-instruction directory exists:
+          - If exists: Error "Already initialized. Use 'agent-instruction build' to regenerate files."
+          - If not exists: Continue
+      - Scan repository for existing CLAUDE.md and AGENTS.md files
+      - If existing files found:
+          - Display list of found files
+          - Prompt: "Found existing instruction files. Create backups? (Y/n)"
+          - If yes: Create .backup copies of each file
+          - If no: Warn "Existing files will be overwritten during build"
+      - Prompt: "Which AI frameworks do you want to support?"
+          - Options: [claude, agents, both]
+          - Default: both
+          - Store in config.json frameworks array
+      - Prompt: "Package discovery mode?"
+          - Options: [auto, manual]
+          - If auto: Set packages: ["auto"] in config.json
+          - If manual: Prompt for comma-separated package paths
+      - Create .agent-instruction directory structure:
+          - .agent-instruction/config.json
+          - .agent-instruction/rules/global.json (with template content)
+      - Display success message with next steps:
+          - "Initialized agent-instruction in [repo-root]"
+          - "Next: Edit .agent-instruction/rules/global.json to add rules"
+          - "Then: Run 'agent-instruction build' to generate instruction files"
+    non_interactive_mode:
+      flag: --non-interactive or --yes
+      behavior: |
+        - Use all defaults (frameworks: both, packages: auto, backups: yes)
+        - No prompts, suitable for CI/CD or scripting
+
+claude_code_skill:
+  id: agent-instruction
+  purpose: Enable Claude Code AI agent to manage instruction rules during development sessions
+  description: |
+    Provides natural language interface to agent-instruction CLI commands.
+    Allows AI agent to add rules, build instruction files, and list rules
+    in response to user requests or when discovering patterns during development.
+
+  installation:
+    location: ~/.local/share/claude/skills/agent-instruction/
+    files:
+      - skill.yaml (skill definition following Claude Code skill schema)
+      - README.md (usage examples and best practices)
+
+  skill_definition:
+    name: agent-instruction
+    version: "1.0.0"
+    triggers:
+      - "add rule"
+      - "update CLAUDE.md"
+      - "update AGENTS.md"
+      - "list instruction rules"
+      - "build instruction files"
+      - "show available rules"
+
+    commands:
+      - name: add_rule
+        description: Add a new instruction rule to a rule file
+        usage: "agent-instruction add \"[rule content]\" --title \"[title]\" --rule=\"[rule-file]\""
+        parameters:
+          - name: content
+            required: true
+            description: The instruction rule text
+          - name: title
+            required: false
+            description: Optional heading for the rule section
+          - name: rule_file
+            required: false
+            description: Target rule file (e.g., "global", "testing"). Prompts if omitted.
+        examples:
+          - "agent-instruction add \"Always use table-driven tests in Go\" --title=\"Testing Standards\" --rule=\"testing\""
+
+      - name: build
+        description: Generate/update all instruction files from rule configurations
+        usage: "agent-instruction build"
+        parameters: []
+        examples:
+          - "agent-instruction build"
+
+      - name: list
+        description: Display all available rule files and their contents
+        usage: "agent-instruction list"
+        parameters: []
+        examples:
+          - "agent-instruction list"
+
+    best_practices:
+      - When user says "remember this for next time", use add_rule
+      - After adding multiple rules, suggest running build to propagate changes
+      - Before adding rule, check existing rules with list to avoid duplicates
+      - Use descriptive titles that make rules easy to find later
+      - Group related rules in the same rule file (e.g., testing.json, security.json)
+
+    integration_points:
+      - Claude Code can invoke via shell execution
+      - Skill appears in Claude Code's skill registry
+      - Can be triggered by natural language requests
+      - Results displayed inline in conversation
+
+open_questions:
+  - question: Should we support Windows in v1.0 or wait for v1.1?
+    options:
+      - Wait for v1.1 and validate approach on macOS first
+      - Add Windows support now for broader adoption
+    impact: Timeline (1-2 weeks for macOS only, 2-3 weeks with Windows support)
+    decision_timeline: Before implementation phase
+    recommendation: Wait for v1.1 to validate core functionality first
+
+  - question: Should we include auto-update mechanism in MVP?
+    options:
+      - Include auto-update check with optional download
+      - Manual updates only via GitHub releases
+    impact: User experience and maintenance burden
+    decision_timeline: Before v1.0 release
+    recommendation: Manual updates for MVP, auto-update in v1.1
+
+  - question: Should we support YAML configuration in addition to JSON?
+    options:
+      - JSON only (as specified in business requirements)
+      - Support both JSON and YAML for user preference
+    impact: Additional dependency (YAML parser), more testing
+    decision_timeline: Before implementation phase
+    recommendation: JSON only for MVP, evaluate YAML based on user feedback

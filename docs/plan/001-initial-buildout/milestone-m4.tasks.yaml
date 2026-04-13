@@ -1,0 +1,388 @@
+milestone: m4
+name: Build Command Implementation
+generated: "2026-04-13T00:00:00Z"
+
+style_anchors:
+  - path: docs/style-anchors/cobra-command-structure.md
+    description: |
+      Build command structure with flags for parallel processing and dry-run.
+  - path: docs/style-anchors/file-operations.md
+    description: |
+      Writing managed sections to CLAUDE.md/AGENTS.md files atomically.
+  - path: docs/style-anchors/graph-traversal-cycle-detection.md
+    description: |
+      Import resolution when composing global and package-level rules.
+  - path: docs/style-anchors/table-driven-testing.md
+    description: |
+      Testing package discovery and build workflow.
+
+global_constraints:
+  allowed_patterns:
+    - "Use filepath.Walk for directory traversal"
+    - "Parallel package discovery where possible"
+    - "Validate package paths before processing"
+    - "Handle symlinks with cycle detection"
+    - "Clear progress indication for large repos"
+  forbidden_patterns:
+    - "Synchronous processing for large package sets"
+    - "Following symlinks without cycle detection"
+    - "Processing excluded directories (.git, node_modules)"
+    - "Silent failures during package discovery"
+  tdd_required: true
+  max_task_duration_minutes: 150
+  commit_strategy: "Commit after each task"
+
+quality_gates:
+  - stage: pre-commit
+    commands:
+      - go fmt ./...
+      - go vet ./...
+      - go test ./...
+  - stage: task-completion
+    criteria:
+      - All tests passing
+      - Package discovery works in both modes
+      - Build completes in under 5 seconds for 50 packages
+      - All edge cases handled
+
+tasks:
+  - id: m4-001
+    name: Implement package discovery algorithm
+    description: |
+      Create package discovery service that finds all packages in monorepo
+      using auto or manual mode as specified in config.
+    estimate_minutes: 120
+    type: code
+    dependencies: []
+    files:
+      create:
+        - internal/builder/discovery.go
+        - internal/builder/discovery_test.go
+    instructions: |
+      **Objective:**
+      Implement package discovery following specification
+
+      **Implementation Steps:**
+      1. Implement DiscoverPackages(config *Config, repoRoot string) ([]string, error):
+         - Check if packages contains "auto"
+         - If auto: walk directory tree
+         - If manual: validate explicit paths
+         - Return list of package directories
+      2. Implement walkForPackages(repoRoot string) ([]string, error):
+         - Use filepath.Walk from root
+         - Look for agent-instruction.json files
+         - Exclude: .git, node_modules, .agent-instruction, .backup
+         - Return directories containing agent-instruction.json
+      3. Implement validatePackagePaths(paths []string, repoRoot string) ([]string, error):
+         - Check each path exists
+         - Check for agent-instruction.json
+         - Return valid paths with warnings for invalid
+      4. Add symlink cycle detection
+      5. Write table-driven tests for both modes
+
+      **Constraints:**
+      - Follow algorithm: technical-requirements.yaml:416-440
+      - Skip excluded directories early
+      - Detect and prevent symlink cycles
+      - Return sorted package list
+      - See: docs/style-anchors/graph-traversal-cycle-detection.md for cycle detection
+
+      **TDD Checklist:**
+      - [ ] Write test for auto mode discovery
+      - [ ] Implement walkForPackages
+      - [ ] Test manual mode validation
+      - [ ] Test excluded directories
+      - [ ] Test symlink handling
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/builder -v -run TestDiscovery
+      ```
+      Expected: Packages discovered correctly
+
+    validation:
+      commands:
+        - go test ./internal/builder -v -run TestDiscovery
+      expected_output: "PASS"
+      on_failure: "Review discovery algorithm"
+
+  - id: m4-002
+    name: Implement package config composition
+    description: |
+      Build logic to compose final instruction set for each package by
+      merging global rules with package-level rules.
+    estimate_minutes: 90
+    type: code
+    dependencies: [m4-001]
+    files:
+      create:
+        - internal/builder/composition.go
+        - internal/builder/composition_test.go
+    instructions: |
+      **Objective:**
+      Compose final instruction set from global and package configs
+
+      **Implementation Steps:**
+      1. Implement ComposeInstructions(globalRules, packageConfig string, ruleSvc rules.RuleService) ([]Instruction, error):
+         - Resolve global rule imports
+         - Load package config if exists
+         - Resolve package imports
+         - Merge: global instructions first, then package instructions
+         - Return combined list
+      2. Handle missing package config gracefully (use only global)
+      3. Handle empty package config
+      4. Write tests for:
+         - Global only
+         - Package only
+         - Both global and package
+         - Package importing global rules
+
+      **Constraints:**
+      - Global rules always come first
+      - Package rules append after global
+      - Respect import order within each
+      - No deduplication
+
+      **TDD Checklist:**
+      - [ ] Write test for global-only composition
+      - [ ] Implement ComposeInstructions
+      - [ ] Test global + package merge
+      - [ ] Test import chains
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/builder -v -run TestComposition
+      ```
+      Expected: Compositions correct in all scenarios
+
+    validation:
+      commands:
+        - go test ./internal/builder -v -run TestComposition
+      expected_output: "PASS"
+      on_failure: "Check composition logic"
+
+  - id: m4-003
+    name: Add parallel package processing
+    description: |
+      Implement concurrent package processing to improve performance for
+      large monorepos while handling errors appropriately.
+    estimate_minutes: 90
+    type: code
+    dependencies: [m4-002]
+    files:
+      create:
+        - internal/builder/parallel.go
+        - internal/builder/parallel_test.go
+    instructions: |
+      **Objective:**
+      Process multiple packages concurrently for better performance
+
+      **Implementation Steps:**
+      1. Implement ProcessPackagesParallel(packages []string, processor func(string) error) error:
+         - Create error group for goroutines
+         - Launch goroutine for each package
+         - Use semaphore to limit concurrency
+         - Collect and return errors
+      2. Set concurrency limit based on CPU count
+      3. Implement proper error aggregation
+      4. Add progress tracking (optional)
+      5. Write tests verifying:
+         - All packages processed
+         - Errors collected correctly
+         - Concurrency limits respected
+         - No data races
+
+      **Constraints:**
+      - Use golang.org/x/sync/errgroup
+      - Limit concurrency (e.g., GOMAXPROCS)
+      - Thread-safe error collection
+      - Clean shutdown on first error (optional)
+
+      **TDD Checklist:**
+      - [ ] Write test for successful parallel processing
+      - [ ] Implement ProcessPackagesParallel
+      - [ ] Test error handling
+      - [ ] Test concurrency limits
+      - [ ] Run with race detector
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/builder -v -race -run TestParallel
+      ```
+      Expected: Parallel processing works without races
+
+    validation:
+      commands:
+        - go test ./internal/builder -v -race -run TestParallel
+      expected_output: "PASS"
+      on_failure: "Fix concurrency issues"
+
+  - id: m4-004
+    name: Implement build command
+    description: |
+      Create build command that discovers packages, composes rules, and
+      generates all instruction files across the monorepo.
+    estimate_minutes: 120
+    type: code
+    dependencies: [m4-003]
+    files:
+      create:
+        - internal/commands/build.go
+        - internal/commands/build_test.go
+      modify:
+        - internal/commands/root.go
+    instructions: |
+      **Objective:**
+      Implement complete build command with all features
+
+      **Implementation Steps:**
+      1. Create build command with Cobra:
+         - Use: "build"
+         - Short: "Build instruction files from rules"
+         - Flags: --parallel, --verbose, --dry-run
+      2. Implement build workflow:
+         - Load .agent-instruction/config.json
+         - Discover packages
+         - For each package:
+           - Compose instructions (global + package)
+           - For each framework in config:
+             - Generate CLAUDE.md or AGENTS.md
+             - Write file with managed sections
+         - Display summary (files updated, errors)
+      3. Add verbose output showing progress
+      4. Add dry-run mode (show what would be done)
+      5. Write tests with mock services
+
+      **Constraints:**
+      - Must complete in under 5 seconds for 50 packages
+      - Use parallel processing by default
+      - Clear error messages with package context
+      - See: docs/style-anchors/cobra-command-structure.md for command patterns
+      - See: docs/style-anchors/file-operations.md for file generation
+
+      **TDD Checklist:**
+      - [ ] Write test for build workflow
+      - [ ] Implement build command structure
+      - [ ] Test package discovery integration
+      - [ ] Test file generation
+      - [ ] Test error handling
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/commands -v -run TestBuild
+      ```
+      Expected: Build command works end-to-end
+
+    validation:
+      commands:
+        - go test ./internal/commands -v -run TestBuild
+      expected_output: "PASS"
+      on_failure: "Review build command logic"
+
+  - id: m4-005
+    name: Add framework-specific file generation
+    description: |
+      Implement logic to generate correct filename (CLAUDE.md vs AGENTS.md)
+      based on framework specification in config.
+    estimate_minutes: 60
+    type: code
+    dependencies: [m4-004]
+    files:
+      modify:
+        - internal/builder/service.go
+        - internal/builder/service_test.go
+    instructions: |
+      **Objective:**
+      Generate appropriate filename based on framework
+
+      **Implementation Steps:**
+      1. Implement GetOutputFilename(framework string) string:
+         - "claude" → "CLAUDE.md"
+         - "agents" → "AGENTS.md"
+         - Return error for unknown framework
+      2. Update BuildFile to accept framework parameter
+      3. Support "both" framework option:
+         - Generate both CLAUDE.md and AGENTS.md
+      4. Write tests for all framework options
+
+      **Constraints:**
+      - Case-insensitive framework matching
+      - Clear error for unknown frameworks
+      - Support future frameworks easily
+
+      **TDD Checklist:**
+      - [ ] Write test for claude framework
+      - [ ] Implement GetOutputFilename
+      - [ ] Test agents framework
+      - [ ] Test "both" option
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/builder -v -run TestFramework
+      ```
+      Expected: Correct filenames for all frameworks
+
+    validation:
+      commands:
+        - go test ./internal/builder -v -run TestFramework
+      expected_output: "PASS"
+      on_failure: "Check framework logic"
+
+  - id: m4-006
+    name: Create build integration tests
+    description: |
+      Write comprehensive end-to-end tests for build command using realistic
+      monorepo structure in temporary directories.
+    estimate_minutes: 90
+    type: test
+    dependencies: [m4-005]
+    files:
+      create:
+        - internal/commands/build_integration_test.go
+        - testdata/monorepo/setup.go
+    instructions: |
+      **Objective:**
+      Verify build command works on realistic monorepo structures
+
+      **Implementation Steps:**
+      1. Create test monorepo structure:
+         - .agent-instruction/config.json
+         - .agent-instruction/rules/global.json
+         - packages/a/agent-instruction.json
+         - packages/b/agent-instruction.json
+         - packages/b/existing-CLAUDE.md (with user content)
+      2. Test scenarios:
+         - Build in auto mode
+         - Build in manual mode
+         - Build with existing files (preserve user content)
+         - Build with multiple frameworks
+         - Build with import chains
+      3. Verify:
+         - All expected files created
+         - User content preserved
+         - Generated content correct
+         - Backups created
+      4. Test performance with 50 packages
+
+      **Constraints:**
+      - Use realistic test data
+      - Clean up temp directories
+      - Test all build paths
+      - Verify performance requirements
+
+      **Validation:**
+      ```bash
+      go test ./internal/commands -v -run TestBuildIntegration
+      ```
+      Expected: All integration scenarios pass
+
+    validation:
+      commands:
+        - go test ./internal/commands -v -run TestBuildIntegration
+      expected_output: "PASS"
+      on_failure: "Fix integration test failures"

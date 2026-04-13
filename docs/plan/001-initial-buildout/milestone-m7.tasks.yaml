@@ -1,0 +1,557 @@
+milestone: m7
+name: Testing, Documentation & Polish
+generated: "2026-04-13T00:00:00Z"
+
+style_anchors:
+  - path: docs/style-anchors/table-driven-testing.md
+    description: |
+      Comprehensive testing patterns for achieving 80% coverage including
+      edge cases, error paths, and integration scenarios.
+  - path: docs/style-anchors/cobra-command-structure.md
+    description: |
+      Reference for testing command execution and output validation.
+  - path: docs/style-anchors/file-operations.md
+    description: |
+      Reference for testing file operations with temp directories.
+  - path: docs/style-anchors/error-handling.md
+    description: |
+      Reference for testing error scenarios and messages.
+
+global_constraints:
+  allowed_patterns:
+    - "Table-driven tests following Go conventions"
+    - "Comprehensive documentation with examples"
+    - "GitHub Actions for CI/CD"
+    - "golangci-lint for code quality"
+    - "Clear contribution guidelines"
+  forbidden_patterns:
+    - "Incomplete test coverage"
+    - "Missing documentation"
+    - "No CI/CD pipeline"
+    - "Hardcoded values in tests"
+  tdd_required: true
+  max_task_duration_minutes: 150
+  commit_strategy: "Commit after each task"
+
+quality_gates:
+  - stage: pre-commit
+    commands:
+      - go fmt ./...
+      - go vet ./...
+      - go test ./...
+      - golangci-lint run
+  - stage: milestone-completion
+    criteria:
+      - Test coverage above 80%
+      - All linters pass
+      - Documentation complete
+      - CI/CD pipeline working
+      - All examples functional
+
+tasks:
+  - id: m7-001
+    name: Achieve 80% test coverage
+    description: |
+      Add missing tests to reach 80% coverage threshold, focusing on
+      untested edge cases and error paths.
+    estimate_minutes: 120
+    type: test
+    dependencies: []
+    files:
+      modify:
+        - internal/*/\*_test.go
+      create:
+        - coverage.html
+    instructions: |
+      **Objective:**
+      Ensure comprehensive test coverage across all packages
+
+      **Implementation Steps:**
+      1. Run coverage analysis:
+         ```bash
+         go test ./... -coverprofile=coverage.out
+         go tool cover -html=coverage.out -o coverage.html
+         ```
+      2. Identify packages below 80% coverage
+      3. Add missing tests for:
+         - Error paths
+         - Edge cases
+         - Validation logic
+         - Integration scenarios
+      4. Focus on critical paths first:
+         - File operations (atomic writes, backups)
+         - Import resolution (cycle detection)
+         - Build workflow
+         - Command execution
+      5. Verify coverage target reached
+
+      **Constraints:**
+      - Use table-driven tests
+      - Test both success and failure paths
+      - Mock external dependencies
+      - Realistic test scenarios
+      - See: docs/style-anchors/table-driven-testing.md for all test patterns
+
+      **TDD Checklist:**
+      - [ ] Generate coverage report
+      - [ ] Identify coverage gaps
+      - [ ] Add tests for critical paths
+      - [ ] Add tests for edge cases
+      - [ ] Verify 80% coverage achieved
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./... -cover
+      ```
+      Expected: Coverage above 80%
+
+    validation:
+      commands:
+        - go test ./... -coverprofile=coverage.out
+        - go tool cover -func=coverage.out
+      expected_output: "Total coverage above 80%"
+      on_failure: "Add more tests to reach threshold"
+
+  - id: m7-002
+    name: Set up golangci-lint configuration
+    description: |
+      Configure golangci-lint with appropriate linters and settings for
+      the project, addressing all linting issues.
+    estimate_minutes: 75
+    type: config
+    dependencies: []
+    files:
+      create:
+        - .golangci.yml
+    instructions: |
+      **Objective:**
+      Configure comprehensive linting for code quality
+
+      **Implementation Steps:**
+      1. Create .golangci.yml with:
+         - Enable linters: gofmt, govet, staticcheck, gosec, errcheck
+         - Configure severity levels
+         - Set timeout appropriately
+         - Exclude generated files
+         - Configure per-linter settings
+      2. Run linter and fix issues:
+         ```bash
+         golangci-lint run
+         ```
+      3. Address common issues:
+         - Unused variables/imports
+         - Error handling
+         - Security concerns
+         - Code complexity
+      4. Update code to pass all linters
+      5. Document any disabled rules with rationale
+
+      **Constraints:**
+      - Use strict settings appropriate for CLI tool
+      - Fix all issues (don't just disable)
+      - Document exceptions
+      - Enable gosec for security
+
+      **Validation:**
+      ```bash
+      golangci-lint run
+      ```
+      Expected: No issues found
+
+    validation:
+      commands:
+        - golangci-lint run
+      expected_output: "No issues"
+      on_failure: "Fix linting issues"
+
+  - id: m7-003
+    name: Create comprehensive README
+    description: |
+      Write main project README with installation, usage, examples,
+      and contribution guidelines.
+    estimate_minutes: 90
+    type: docs
+    dependencies: []
+    files:
+      modify:
+        - README.md
+    instructions: |
+      **Objective:**
+      Provide complete project documentation for users and contributors
+
+      **Implementation Steps:**
+      1. Add README sections:
+         - Project overview and value proposition
+         - Features list
+         - Installation instructions (multiple methods)
+         - Quick start guide
+         - Usage examples for all commands
+         - Configuration file documentation
+         - Development setup instructions
+         - Contributing guidelines
+         - License information
+      2. Include visual examples:
+         - Command output examples
+         - Directory structure diagrams
+         - Configuration examples
+      3. Add badges:
+         - Build status
+         - Coverage
+         - Go version
+         - License
+      4. Write in clear, concise language
+      5. Test all examples work
+
+      **Constraints:**
+      - Follow business requirements value proposition
+      - Include all four commands
+      - Real, working examples
+      - Clear installation steps
+
+      **Validation:**
+      ```bash
+      cat README.md
+      ```
+      Expected: Comprehensive, well-formatted documentation
+
+    validation:
+      commands:
+        - test -f README.md
+        - grep -q "Installation" README.md
+        - grep -q "Usage" README.md
+      expected_output: "README complete with all sections"
+      on_failure: "Add missing sections"
+
+  - id: m7-004
+    name: Set up GitHub Actions CI/CD pipeline
+    description: |
+      Create comprehensive CI/CD workflow with testing, linting, security
+      scanning, and binary building.
+    estimate_minutes: 90
+    type: config
+    dependencies: []
+    files:
+      create:
+        - .github/workflows/ci.yml
+        - .github/workflows/release.yml
+    instructions: |
+      **Objective:**
+      Automate testing, quality checks, and releases
+
+      **Implementation Steps:**
+      1. Create .github/workflows/ci.yml:
+         - Trigger: push, pull_request
+         - Jobs:
+           - test: Run tests with coverage upload
+           - lint: Run golangci-lint
+           - security: Run gosec
+           - build: Build binary for multiple platforms
+         - Use Go 1.21
+         - Cache dependencies
+         - Upload coverage to codecov (optional)
+      2. Create .github/workflows/release.yml:
+         - Trigger: tag push (v*)
+         - Build binaries for:
+           - macOS (amd64, arm64)
+           - Linux (amd64, arm64)
+         - Create GitHub release
+         - Upload binary artifacts
+      3. Test workflow with dry-run
+      4. Document CI/CD process
+
+      **Constraints:**
+      - Follow spec: technical-requirements.yaml:226-272
+      - Cache for faster builds
+      - Run all quality gates
+      - Cross-platform builds
+
+      **Validation:**
+      ```bash
+      cat .github/workflows/ci.yml
+      ```
+      Expected: Valid GitHub Actions workflow
+
+    validation:
+      commands:
+        - test -f .github/workflows/ci.yml
+        - test -f .github/workflows/release.yml
+      expected_output: "Workflow files created"
+      on_failure: "Create missing workflows"
+
+  - id: m7-005
+    name: Write command usage documentation
+    description: |
+      Create detailed documentation for each command with all flags,
+      examples, and common use cases.
+    estimate_minutes: 75
+    type: docs
+    dependencies: [m7-003]
+    files:
+      create:
+        - docs/commands/init.md
+        - docs/commands/build.md
+        - docs/commands/add.md
+        - docs/commands/list.md
+        - docs/configuration.md
+        - docs/examples.md
+    instructions: |
+      **Objective:**
+      Provide detailed reference documentation for all commands
+
+      **Implementation Steps:**
+      1. For each command, document:
+         - Synopsis and description
+         - All flags with descriptions
+         - Exit codes
+         - Usage examples (basic to advanced)
+         - Common patterns
+         - Troubleshooting
+      2. Create docs/configuration.md:
+         - Config file format
+         - Rule file format
+         - Package config format
+         - Import resolution rules
+         - Best practices
+      3. Create docs/examples.md:
+         - Complete workflows
+         - Monorepo setup example
+         - Multi-package example
+         - Import chain example
+      4. Cross-link related docs
+
+      **Constraints:**
+      - Cover all functionality
+      - Working code examples
+      - Clear explanations
+      - Proper markdown formatting
+
+      **Validation:**
+      ```bash
+      ls docs/commands/
+      ```
+      Expected: All command docs created
+
+    validation:
+      commands:
+        - test -f docs/commands/init.md
+        - test -f docs/commands/build.md
+        - test -f docs/commands/add.md
+        - test -f docs/commands/list.md
+      expected_output: "All command docs exist"
+      on_failure: "Create missing documentation"
+
+  - id: m7-006
+    name: Create example configurations
+    description: |
+      Build realistic example configurations demonstrating common setups
+      and patterns for different use cases.
+    estimate_minutes: 60
+    type: docs
+    dependencies: [m7-005]
+    files:
+      create:
+        - examples/simple-repo/.agent-instruction/config.json
+        - examples/simple-repo/.agent-instruction/rules/global.json
+        - examples/monorepo/.agent-instruction/config.json
+        - examples/monorepo/.agent-instruction/rules/global.json
+        - examples/monorepo/.agent-instruction/rules/testing.json
+        - examples/monorepo/packages/api/agent-instruction.json
+        - examples/README.md
+    instructions: |
+      **Objective:**
+      Provide ready-to-use example configurations
+
+      **Implementation Steps:**
+      1. Create simple-repo example:
+         - Single package repository
+         - Basic global rules
+         - Both CLAUDE.md and AGENTS.md
+      2. Create monorepo example:
+         - Multiple packages
+         - Global and package-specific rules
+         - Import chains
+         - Different rule files (global, testing, security)
+      3. Add examples/README.md:
+         - Description of each example
+         - How to use them
+         - What patterns they demonstrate
+      4. Ensure examples are valid and realistic
+
+      **Constraints:**
+      - Realistic rule content
+      - Valid JSON syntax
+      - Demonstrate key features
+      - Include comments explaining patterns
+
+      **Validation:**
+      ```bash
+      cd examples/simple-repo && agent-instruction build
+      cd examples/monorepo && agent-instruction build
+      ```
+      Expected: Examples build successfully
+
+    validation:
+      commands:
+        - test -f examples/simple-repo/.agent-instruction/config.json
+        - test -f examples/monorepo/.agent-instruction/config.json
+      expected_output: "Example configurations created"
+      on_failure: "Create missing examples"
+
+  - id: m7-007
+    name: Add CONTRIBUTING and CODE_OF_CONDUCT
+    description: |
+      Create contribution guidelines and code of conduct to facilitate
+      open source collaboration.
+    estimate_minutes: 45
+    type: docs
+    dependencies: []
+    files:
+      create:
+        - CONTRIBUTING.md
+        - CODE_OF_CONDUCT.md
+        - .github/ISSUE_TEMPLATE/bug_report.md
+        - .github/ISSUE_TEMPLATE/feature_request.md
+    instructions: |
+      **Objective:**
+      Enable community contributions with clear guidelines
+
+      **Implementation Steps:**
+      1. Create CONTRIBUTING.md:
+         - How to set up development environment
+         - Running tests
+         - Code style guidelines
+         - Commit message conventions
+         - Pull request process
+         - Where to ask questions
+      2. Create CODE_OF_CONDUCT.md:
+         - Use Contributor Covenant or similar
+         - Define expected behavior
+         - Reporting process
+      3. Create issue templates:
+         - Bug report with reproducible steps
+         - Feature request with use case
+      4. Link from README
+
+      **Constraints:**
+      - Clear, welcoming language
+      - Specific technical requirements
+      - Standard GitHub conventions
+      - Easy to follow
+
+      **Validation:**
+      ```bash
+      test -f CONTRIBUTING.md
+      test -f CODE_OF_CONDUCT.md
+      ```
+      Expected: All files created
+
+    validation:
+      commands:
+        - test -f CONTRIBUTING.md
+        - test -f CODE_OF_CONDUCT.md
+      expected_output: "Contribution docs created"
+      on_failure: "Create missing files"
+
+  - id: m7-008
+    name: Final integration testing and bug fixes
+    description: |
+      Perform comprehensive end-to-end testing, identify and fix any
+      remaining bugs, and verify all requirements met.
+    estimate_minutes: 120
+    type: test
+    dependencies: [m7-001, m7-002, m7-003, m7-004, m7-005, m7-006, m7-007]
+    files:
+      create:
+        - test/e2e/full_workflow_test.sh
+    instructions: |
+      **Objective:**
+      Ensure complete system works correctly end-to-end
+
+      **Implementation Steps:**
+      1. Create comprehensive E2E test script:
+         - Test init command in empty repo
+         - Add rules using add command
+         - Build files with build command
+         - List rules with list command
+         - Verify generated files correct
+         - Test with existing files
+         - Test in monorepo structure
+         - Test error scenarios
+      2. Run tests on clean environment
+      3. Verify all success criteria from business requirements:
+         - All commands work
+         - Files generated correctly
+         - User content preserved
+         - Performance requirements met
+      4. Fix any discovered bugs
+      5. Update documentation if needed
+      6. Verify Claude Code skill works
+
+      **Constraints:**
+      - Test in realistic environments
+      - Cover all functional requirements
+      - Verify non-functional requirements
+      - Document any known limitations
+
+      **Validation:**
+      ```bash
+      bash test/e2e/full_workflow_test.sh
+      ```
+      Expected: All E2E tests pass
+
+    validation:
+      commands:
+        - bash test/e2e/full_workflow_test.sh
+      expected_output: "All tests pass"
+      on_failure: "Fix failing tests and bugs"
+
+  - id: m7-009
+    name: Prepare v1.0.0 release
+    description: |
+      Tag release, build binaries, create GitHub release with changelog
+      and installation instructions.
+    estimate_minutes: 60
+    type: release
+    dependencies: [m7-008]
+    files:
+      create:
+        - CHANGELOG.md
+      modify:
+        - README.md
+    instructions: |
+      **Objective:**
+      Publish v1.0.0 release ready for users
+
+      **Implementation Steps:**
+      1. Create CHANGELOG.md:
+         - Version 1.0.0
+         - Release date
+         - Features implemented
+         - Known limitations
+      2. Update README with installation from release
+      3. Verify all tests pass
+      4. Verify CI/CD pipeline green
+      5. Tag commit: `git tag v1.0.0`
+      6. Push tag to trigger release workflow
+      7. Verify GitHub release created
+      8. Test binary downloads work
+      9. Update documentation with release version
+
+      **Constraints:**
+      - Semantic versioning
+      - Complete changelog
+      - Working binaries
+      - Clear release notes
+
+      **Validation:**
+      ```bash
+      git tag -l
+      ```
+      Expected: v1.0.0 tag exists
+
+    validation:
+      commands:
+        - test -f CHANGELOG.md
+      expected_output: "CHANGELOG created"
+      on_failure: "Complete release preparation"

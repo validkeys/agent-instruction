@@ -1,0 +1,138 @@
+version: "1.0.0"
+project: agent-instruction
+generated: "2026-04-13T00:00:00Z"
+
+business_requirements: ./business-requirements.yaml
+technical_requirements: ./technical-requirements.yaml
+
+style_anchors_index: ../../style-anchors/README.md
+style_anchors_note: |
+  All implementation tasks should reference appropriate style anchors from
+  docs/style-anchors/. Each milestone's tasks.yaml file includes specific
+  anchor references. Consult the index for quick lookup by task type.
+
+meta:
+  ordering_strategy: single-feature-branch
+  ordering_rationale: "All milestones live on one feature branch with technical dependency ordering for integrated delivery"
+
+milestones:
+  - id: m0
+    name: Foundation & Core Infrastructure
+    description: |
+      Establish project foundation with Go modules, Cobra CLI framework, and core data structures.
+      Creates the basic project layout following Go best practices and defines all data models
+      for configuration, rules, and instructions.
+    dependencies: []
+    estimated_duration: 1-2 days
+    tasks_file: milestone-m0.tasks.yaml
+    success_criteria:
+      - Go module initialized with proper dependencies
+      - Cobra CLI framework integrated with root command
+      - All core data structures defined with JSON tags
+      - Project structure follows standard Go layout
+      - Code compiles successfully
+
+  - id: m1
+    name: File & Config Services
+    description: |
+      Implement file operations service with managed section handling, backup creation,
+      and atomic writes. Build configuration service for JSON parsing and validation.
+    dependencies: [m0]
+    estimated_duration: 2-3 days
+    tasks_file: milestone-m1.tasks.yaml
+    success_criteria:
+      - File service handles managed sections correctly
+      - Backup creation works for existing files
+      - Atomic writes prevent file corruption
+      - Config service parses and validates JSON
+      - All file operations are tested
+
+  - id: m2
+    name: Rule Management & Import Resolution
+    description: |
+      Create rule service with import resolution algorithm including cycle detection.
+      Implements depth-first traversal with proper error handling for circular imports.
+    dependencies: [m1]
+    estimated_duration: 2-3 days
+    tasks_file: milestone-m2.tasks.yaml
+    success_criteria:
+      - Import resolution algorithm works correctly
+      - Cycle detection prevents infinite loops
+      - Instructions merged in correct order
+      - Error messages are clear and actionable
+      - All edge cases tested
+
+  - id: m3
+    name: Build Service & Init Command
+    description: |
+      Implement markdown generation logic for CLAUDE.md/AGENTS.md files and create
+      init command with interactive prompts for initial setup.
+    dependencies: [m2]
+    estimated_duration: 2-3 days
+    tasks_file: milestone-m3.tasks.yaml
+    success_criteria:
+      - Build service generates valid markdown
+      - Init command creates proper directory structure
+      - Interactive prompts work correctly
+      - Backup logic integrated with init command
+      - Generated files have correct managed markers
+
+  - id: m4
+    name: Build Command Implementation
+    description: |
+      Implement full build command with package discovery algorithm, import composition,
+      and multi-package support for monorepos.
+    dependencies: [m3]
+    estimated_duration: 2-3 days
+    tasks_file: milestone-m4.tasks.yaml
+    success_criteria:
+      - Package discovery works in auto and manual modes
+      - Build command generates files for all packages
+      - Global and package-level rules compose correctly
+      - Symlink handling prevents infinite loops
+      - Build completes in under 5 seconds for 50 packages
+
+  - id: m5
+    name: Add & List Commands
+    description: |
+      Implement add command for quick rule addition and list command for displaying
+      available rules with formatted output.
+    dependencies: [m4]
+    estimated_duration: 1-2 days
+    tasks_file: milestone-m5.tasks.yaml
+    success_criteria:
+      - Add command appends rules to correct files
+      - Interactive rule file selection works
+      - List command displays all rules clearly
+      - Commands follow Unix conventions
+      - Help text is comprehensive
+
+  - id: m6
+    name: Claude Code Skill
+    description: |
+      Create Claude Code skill definition following the skill schema with proper
+      triggers, command definitions, and best practices documentation.
+    dependencies: [m5]
+    estimated_duration: 1 day
+    tasks_file: milestone-m6.tasks.yaml
+    success_criteria:
+      - Skill definition follows Claude Code schema
+      - All commands properly documented
+      - Triggers cover natural language patterns
+      - Installation instructions are clear
+      - Examples demonstrate common workflows
+
+  - id: m7
+    name: Testing, Documentation & Polish
+    description: |
+      Add comprehensive test coverage, write README documentation, create usage examples,
+      and set up CI/CD pipeline with GitHub Actions.
+    dependencies: [m6]
+    estimated_duration: 2-3 days
+    tasks_file: milestone-m7.tasks.yaml
+    success_criteria:
+      - Test coverage above 80%
+      - All table-driven tests following Cobra patterns
+      - README includes installation and usage
+      - CI/CD pipeline runs tests, linting, security checks
+      - All commands have working examples

@@ -1,0 +1,340 @@
+milestone: m6
+name: Claude Code Skill
+generated: "2026-04-13T00:00:00Z"
+
+style_anchors:
+  - path: technical-requirements.yaml
+    lines: 510-577
+    description: |
+      Complete Claude Code skill specification including triggers,
+      commands, parameters, examples, and best practices.
+
+global_constraints:
+  allowed_patterns:
+    - "Follow Claude Code skill schema exactly"
+    - "Use natural language triggers"
+    - "Provide comprehensive examples"
+    - "Document best practices"
+    - "Include installation instructions"
+  forbidden_patterns:
+    - "Custom skill formats"
+    - "Incomplete command definitions"
+    - "Missing parameter descriptions"
+    - "Undocumented behaviors"
+  tdd_required: false
+  max_task_duration_minutes: 90
+  commit_strategy: "Commit after each task"
+
+quality_gates:
+  - stage: task-completion
+    criteria:
+      - Skill definition is valid YAML
+      - All commands documented
+      - Examples are realistic
+      - Installation instructions work
+
+tasks:
+  - id: m6-001
+    name: Create skill directory structure
+    description: |
+      Set up Claude Code skill directory with proper structure for
+      distribution and installation.
+    estimate_minutes: 30
+    type: config
+    dependencies: []
+    files:
+      create:
+        - skill/agent-instruction/skill.yaml
+        - skill/agent-instruction/README.md
+        - skill/agent-instruction/examples/
+        - skill/agent-instruction/CHANGELOG.md
+    instructions: |
+      **Objective:**
+      Create proper directory structure for Claude Code skill
+
+      **Implementation Steps:**
+      1. Create skill/agent-instruction/ directory
+      2. Create empty skill.yaml (will populate in next task)
+      3. Create README.md template
+      4. Create examples/ directory for usage examples
+      5. Create CHANGELOG.md for version tracking
+
+      **Constraints:**
+      - Follow Claude Code skill conventions
+      - Use standard directory layout
+      - Include all necessary files
+
+      **Validation:**
+      ```bash
+      ls -la skill/agent-instruction/
+      ```
+      Expected: All files created
+
+    validation:
+      commands:
+        - test -f skill/agent-instruction/skill.yaml
+        - test -f skill/agent-instruction/README.md
+      expected_output: "Files exist"
+      on_failure: "Create missing files"
+
+  - id: m6-002
+    name: Define skill.yaml with triggers and commands
+    description: |
+      Create complete skill.yaml following Claude Code schema with all
+      triggers, commands, parameters, and metadata.
+    estimate_minutes: 90
+    type: config
+    dependencies: [m6-001]
+    files:
+      modify:
+        - skill/agent-instruction/skill.yaml
+      touch_only:
+        - technical-requirements.yaml
+    instructions: |
+      **Objective:**
+      Write complete skill definition following specification
+
+      **Implementation Steps:**
+      1. Define skill metadata:
+         - name: agent-instruction
+         - version: 1.0.0
+         - description: Manage AI instruction files in monorepos
+         - author: [Your name]
+      2. Define triggers (from spec):
+         - "add rule"
+         - "update CLAUDE.md"
+         - "update AGENTS.md"
+         - "list instruction rules"
+         - "build instruction files"
+         - "show available rules"
+      3. Define commands (add_rule, build, list):
+         - For each: name, description, usage, parameters, examples
+         - Follow spec: technical-requirements.yaml:535-565
+      4. Add best_practices section:
+         - When to use each command
+         - Workflow recommendations
+         - Tips for effective rule management
+      5. Validate YAML syntax
+
+      **Constraints:**
+      - Follow spec exactly: technical-requirements.yaml:510-577
+      - Valid YAML syntax
+      - Complete parameter definitions
+      - Realistic examples
+
+      **Validation:**
+      ```bash
+      yamllint skill/agent-instruction/skill.yaml
+      ```
+      Expected: Valid YAML, no errors
+
+    validation:
+      commands:
+        - cat skill/agent-instruction/skill.yaml
+      expected_output: "Valid YAML content"
+      on_failure: "Fix YAML syntax errors"
+
+  - id: m6-003
+    name: Write skill README with usage guide
+    description: |
+      Create comprehensive README for skill with installation instructions,
+      usage examples, and troubleshooting.
+    estimate_minutes: 60
+    type: docs
+    dependencies: [m6-002]
+    files:
+      modify:
+        - skill/agent-instruction/README.md
+    instructions: |
+      **Objective:**
+      Provide clear documentation for skill users
+
+      **Implementation Steps:**
+      1. Add sections:
+         - Overview: What the skill does
+         - Installation: How to install skill
+         - Commands: List of available commands
+         - Usage Examples: Common workflows
+         - Triggers: Natural language patterns
+         - Best Practices: Tips for effective use
+         - Troubleshooting: Common issues
+      2. Include code examples for each command
+      3. Add workflow examples:
+         - Adding rule during development
+         - Building files after changes
+         - Listing rules to avoid duplicates
+      4. Document integration with Claude Code
+      5. Add badges (version, status)
+
+      **Constraints:**
+      - Clear, concise language
+      - Complete examples that work
+      - Proper markdown formatting
+      - Include all commands
+
+      **Validation:**
+      ```bash
+      cat skill/agent-instruction/README.md
+      ```
+      Expected: Well-formatted, comprehensive guide
+
+    validation:
+      commands:
+        - test -f skill/agent-instruction/README.md
+      expected_output: "README exists and is readable"
+      on_failure: "Review README content"
+
+  - id: m6-004
+    name: Create usage examples
+    description: |
+      Build realistic usage examples demonstrating common workflows and
+      command combinations.
+    estimate_minutes: 45
+    type: docs
+    dependencies: [m6-003]
+    files:
+      create:
+        - skill/agent-instruction/examples/add-rule-example.md
+        - skill/agent-instruction/examples/build-workflow.md
+        - skill/agent-instruction/examples/list-and-review.md
+    instructions: |
+      **Objective:**
+      Provide concrete examples for common use cases
+
+      **Implementation Steps:**
+      1. Create add-rule-example.md:
+         - Scenario: Discovered AI keeps making same mistake
+         - Show conversation leading to rule addition
+         - Full command with all parameters
+         - Expected output
+      2. Create build-workflow.md:
+         - Scenario: After adding multiple rules
+         - List rules to review
+         - Build to propagate changes
+         - Verify files updated
+      3. Create list-and-review.md:
+         - Scenario: Want to see existing rules
+         - List command usage
+         - Understanding the output
+         - When to use --verbose
+      4. Format as realistic conversations
+
+      **Constraints:**
+      - Realistic scenarios
+      - Complete command examples
+      - Expected output shown
+      - Explain reasoning
+
+      **Validation:**
+      ```bash
+      ls skill/agent-instruction/examples/
+      ```
+      Expected: All example files created
+
+    validation:
+      commands:
+        - test -f skill/agent-instruction/examples/add-rule-example.md
+      expected_output: "Example files exist"
+      on_failure: "Create missing examples"
+
+  - id: m6-005
+    name: Add installation script
+    description: |
+      Create installation script that copies skill to Claude Code skills
+      directory with proper validation.
+    estimate_minutes: 60
+    type: code
+    dependencies: [m6-004]
+    files:
+      create:
+        - skill/install.sh
+        - skill/agent-instruction/install.md
+    instructions: |
+      **Objective:**
+      Provide easy installation for Claude Code users
+
+      **Implementation Steps:**
+      1. Create install.sh script:
+         - Detect Claude Code skills directory
+         - Default: ~/.local/share/claude/skills/
+         - Allow override with CLAUDE_SKILLS_DIR
+         - Copy skill directory to skills location
+         - Validate skill.yaml after copy
+         - Display success message
+      2. Add error handling:
+         - Skills directory doesn't exist
+         - Permission denied
+         - Skill already installed
+      3. Make script executable
+      4. Write install.md with:
+         - Prerequisites
+         - Installation steps
+         - Verification instructions
+         - Uninstallation instructions
+
+      **Constraints:**
+      - Cross-platform (macOS/Linux)
+      - Clear error messages
+      - Idempotent (safe to run multiple times)
+      - Validates installation
+
+      **Validation:**
+      ```bash
+      bash skill/install.sh --dry-run
+      ```
+      Expected: Script runs without errors
+
+    validation:
+      commands:
+        - test -x skill/install.sh
+      expected_output: "Script is executable"
+      on_failure: "Fix script permissions"
+
+  - id: m6-006
+    name: Test skill integration with agent-instruction CLI
+    description: |
+      Verify skill correctly invokes agent-instruction commands and handles
+      responses appropriately.
+    estimate_minutes: 45
+    type: test
+    dependencies: [m6-005]
+    files:
+      create:
+        - skill/agent-instruction/test-integration.sh
+    instructions: |
+      **Objective:**
+      Ensure skill integrates properly with CLI
+
+      **Implementation Steps:**
+      1. Create test script:
+         - Set up temporary test environment
+         - Initialize agent-instruction
+         - Test each skill command:
+           - add_rule with parameters
+           - build command
+           - list command
+         - Verify expected behavior
+         - Clean up test environment
+      2. Test error scenarios:
+         - Command not found
+         - Invalid arguments
+         - Not initialized
+      3. Document test results
+
+      **Constraints:**
+      - Use temporary directories
+      - Don't pollute user environment
+      - Test all command paths
+      - Verify outputs
+
+      **Validation:**
+      ```bash
+      bash skill/agent-instruction/test-integration.sh
+      ```
+      Expected: All integration tests pass
+
+    validation:
+      commands:
+        - test -f skill/agent-instruction/test-integration.sh
+      expected_output: "Test script exists"
+      on_failure: "Create test script"

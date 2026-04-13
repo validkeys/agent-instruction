@@ -1,0 +1,393 @@
+milestone: m5
+name: Add & List Commands
+generated: "2026-04-13T00:00:00Z"
+
+style_anchors:
+  - path: docs/style-anchors/cobra-command-structure.md
+    description: |
+      Command structure for add and list commands with flag parsing and
+      interactive prompts.
+  - path: docs/style-anchors/json-config-handling.md
+    description: |
+      Loading and modifying rule files, appending instructions atomically.
+  - path: docs/style-anchors/error-handling.md
+    description: |
+      Validation errors and user-friendly error messages.
+  - path: docs/style-anchors/table-driven-testing.md
+    description: |
+      Testing commands with various flag combinations.
+
+global_constraints:
+  allowed_patterns:
+    - "Use Cobra flag parsing for command arguments"
+    - "Interactive selection when flags omitted"
+    - "Clear success messages with context"
+    - "Formatted output for list command"
+    - "Follow Unix CLI conventions"
+  forbidden_patterns:
+    - "Required flags without defaults or prompts"
+    - "Cryptic error messages"
+    - "Unformatted JSON dumps"
+    - "Silent modifications"
+  tdd_required: true
+  max_task_duration_minutes: 150
+  commit_strategy: "Commit after each task"
+
+quality_gates:
+  - stage: pre-commit
+    commands:
+      - go fmt ./...
+      - go vet ./...
+      - go test ./...
+  - stage: task-completion
+    criteria:
+      - All tests passing
+      - Commands follow Unix conventions
+      - Help text is comprehensive
+      - Interactive mode works smoothly
+
+tasks:
+  - id: m5-001
+    name: Implement add command with flag parsing
+    description: |
+      Create add command that accepts rule content, title, and target file
+      via flags with validation and error handling.
+    estimate_minutes: 90
+    type: code
+    dependencies: []
+    files:
+      create:
+        - internal/commands/add.go
+        - internal/commands/add_test.go
+      modify:
+        - internal/commands/root.go
+    instructions: |
+      **Objective:**
+      Implement add command for quick rule addition
+
+      **Implementation Steps:**
+      1. Create add command with Cobra:
+         - Use: "add [rule-content]"
+         - Short: "Add a new instruction rule"
+         - Args: cobra.ExactArgs(1) for rule content
+         - Flags:
+           --title string: Optional heading for rule
+           --rule string: Target rule file (e.g., "global", "testing")
+      2. Implement validation:
+         - Rule content must not be empty
+         - If --rule provided, validate file exists
+         - If --rule omitted, will prompt interactively
+      3. Add success message showing:
+         - Rule added to which file
+         - Reminder to run build command
+      4. Write tests for flag parsing
+
+      **Constraints:**
+      - Follow FR-5 specification: business-requirements.yaml:120-133
+      - Accept content as positional argument
+      - Flags use double-dash (--title not -t)
+      - Clear error messages for validation failures
+      - See: docs/style-anchors/cobra-command-structure.md for command structure
+
+      **TDD Checklist:**
+      - [ ] Write test for command creation
+      - [ ] Implement add command structure
+      - [ ] Test flag parsing
+      - [ ] Test validation logic
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/commands -v -run TestAdd
+      ```
+      Expected: Add command parses flags correctly
+
+    validation:
+      commands:
+        - go test ./internal/commands -v -run TestAdd
+      expected_output: "PASS"
+      on_failure: "Check add command flag parsing"
+
+  - id: m5-002
+    name: Add interactive rule file selection
+    description: |
+      Implement interactive prompt to select target rule file when --rule
+      flag is omitted, showing available rule files.
+    estimate_minutes: 75
+    type: code
+    dependencies: [m5-001]
+    files:
+      modify:
+        - internal/commands/add.go
+        - internal/commands/add_test.go
+      create:
+        - internal/commands/interactive.go
+        - internal/commands/interactive_test.go
+    instructions: |
+      **Objective:**
+      Add interactive rule file selection for better UX
+
+      **Implementation Steps:**
+      1. Implement ListRuleFiles(rulesDir string) ([]string, error):
+         - Scan .agent-instruction/rules/ directory
+         - Return list of .json files (without extension)
+      2. Implement PromptRuleFile(available []string) (string, error):
+         - Display numbered list of available rule files
+         - Prompt: "Select rule file (1-N): "
+         - Validate selection
+         - Return chosen file name
+      3. Integrate into add command:
+         - If --rule flag empty, call interactive selection
+         - Use selected file for adding rule
+      4. Write tests with mocked input
+
+      **Constraints:**
+      - Only show .json files from rules directory
+      - Number from 1 (not 0) for user friendliness
+      - Validate numeric input
+      - Allow cancellation (Ctrl-C)
+
+      **TDD Checklist:**
+      - [ ] Write test for ListRuleFiles
+      - [ ] Implement file listing
+      - [ ] Test interactive prompt (mocked)
+      - [ ] Test integration with add command
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/commands -v -run TestInteractive
+      ```
+      Expected: Interactive selection works correctly
+
+    validation:
+      commands:
+        - go test ./internal/commands -v -run TestInteractive
+      expected_output: "PASS"
+      on_failure: "Review interactive logic"
+
+  - id: m5-003
+    name: Implement rule addition logic
+    description: |
+      Build service method to append instruction to existing rule file,
+      preserving structure and using atomic writes.
+    estimate_minutes: 75
+    type: code
+    dependencies: [m5-002]
+    files:
+      modify:
+        - internal/rules/service.go
+        - internal/rules/service_test.go
+    instructions: |
+      **Objective:**
+      Add instruction to rule file safely and atomically
+
+      **Implementation Steps:**
+      1. Implement AddInstruction method (if not exists from m2-005):
+         - Load existing rule file
+         - Create new Instruction from params
+         - Append to instructions array
+         - Save atomically
+      2. Handle missing optional fields (heading, references)
+      3. Preserve existing file structure
+      4. Write tests verifying:
+         - Instruction added correctly
+         - Existing instructions preserved
+         - JSON formatted properly
+         - Atomic write used
+
+      **Constraints:**
+      - Use atomic writes
+      - Preserve all existing data
+      - Format JSON with indentation
+      - Return error if file doesn't exist
+      - See: docs/style-anchors/json-config-handling.md for JSON save patterns
+
+      **TDD Checklist:**
+      - [ ] Write test for adding instruction
+      - [ ] Implement AddInstruction logic
+      - [ ] Test preservation of existing data
+      - [ ] Test optional fields
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/rules -v -run TestAddInstruction
+      ```
+      Expected: Instructions added correctly
+
+    validation:
+      commands:
+        - go test ./internal/rules -v -run TestAddInstruction
+      expected_output: "PASS"
+      on_failure: "Check addition logic"
+
+  - id: m5-004
+    name: Integrate add command with services
+    description: |
+      Connect add command to RuleService, completing the full add workflow
+      with proper error handling and user feedback.
+    estimate_minutes: 60
+    type: code
+    dependencies: [m5-003]
+    files:
+      modify:
+        - internal/commands/add.go
+        - internal/commands/add_test.go
+    instructions: |
+      **Objective:**
+      Complete add command implementation with service integration
+
+      **Implementation Steps:**
+      1. Update add command RunE function:
+         - Initialize services (ConfigService, RuleService)
+         - Get target rule file (flag or interactive)
+         - Construct full path to rule file
+         - Call RuleService.AddInstruction
+         - Display success message
+         - Suggest running build command
+      2. Add comprehensive error handling
+      3. Write integration tests end-to-end
+
+      **Constraints:**
+      - Initialize services once
+      - Clear error messages with context
+      - Success message includes next steps
+      - Handle all error cases gracefully
+
+      **TDD Checklist:**
+      - [ ] Write test for full add workflow
+      - [ ] Integrate services
+      - [ ] Test error paths
+      - [ ] Test success message
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/commands -v -run TestAddIntegration
+      ```
+      Expected: Full add workflow works
+
+    validation:
+      commands:
+        - go test ./internal/commands -v -run TestAddIntegration
+      expected_output: "PASS"
+      on_failure: "Fix integration issues"
+
+  - id: m5-005
+    name: Implement list command with formatted output
+    description: |
+      Create list command that displays all rule files and their contents
+      in a clear, readable format.
+    estimate_minutes: 90
+    type: code
+    dependencies: []
+    files:
+      create:
+        - internal/commands/list.go
+        - internal/commands/list_test.go
+      modify:
+        - internal/commands/root.go
+    instructions: |
+      **Objective:**
+      Implement list command for viewing available rules
+
+      **Implementation Steps:**
+      1. Create list command with Cobra:
+         - Use: "list"
+         - Short: "List all instruction rules"
+         - Flags: --verbose (show full rule content)
+      2. Implement listing logic:
+         - Scan .agent-instruction/rules/ directory
+         - For each rule file:
+           - Load and parse JSON
+           - Display file name as heading
+           - Show instruction count
+           - If --verbose: show full instructions
+           - Otherwise: show titles/headings only
+      3. Format output clearly:
+         - Use colors if terminal supports (optional)
+         - Indent nested content
+         - Show empty files differently
+      4. Write tests for formatting
+
+      **Constraints:**
+      - Follow FR-7: business-requirements.yaml:136-142
+      - Human-readable output (not raw JSON)
+      - Handle empty rule files
+      - Handle malformed files gracefully
+      - See: docs/style-anchors/cobra-command-structure.md for output handling
+
+      **TDD Checklist:**
+      - [ ] Write test for list command creation
+      - [ ] Implement basic listing
+      - [ ] Test formatted output
+      - [ ] Test --verbose mode
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/commands -v -run TestList
+      ```
+      Expected: List output is readable
+
+    validation:
+      commands:
+        - go test ./internal/commands -v -run TestList
+      expected_output: "PASS"
+      on_failure: "Review list formatting"
+
+  - id: m5-006
+    name: Add output formatting helpers
+    description: |
+      Create formatting utilities for consistent command output including
+      colors, indentation, and success/error styling.
+    estimate_minutes: 60
+    type: code
+    dependencies: [m5-005]
+    files:
+      create:
+        - internal/commands/format.go
+        - internal/commands/format_test.go
+    instructions: |
+      **Objective:**
+      Provide consistent output formatting across all commands
+
+      **Implementation Steps:**
+      1. Implement formatting functions:
+         - FormatSuccess(msg string) string
+         - FormatError(msg string) string
+         - FormatHeading(text string) string
+         - FormatList(items []string) string
+         - IndentText(text string, spaces int) string
+      2. Add color support detection (optional):
+         - Check if output is terminal
+         - Use ANSI codes if supported
+         - Plain text otherwise
+      3. Update all commands to use formatters
+      4. Write tests for formatting functions
+
+      **Constraints:**
+      - Consistent style across commands
+      - Degrade gracefully without color support
+      - No external color libraries (use ANSI codes)
+      - Clear visual hierarchy
+
+      **TDD Checklist:**
+      - [ ] Write test for success formatting
+      - [ ] Implement format helpers
+      - [ ] Test color detection
+      - [ ] Update commands to use formatters
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/commands -v -run TestFormat
+      ```
+      Expected: Formatting functions work correctly
+
+    validation:
+      commands:
+        - go test ./internal/commands -v -run TestFormat
+      expected_output: "PASS"
+      on_failure: "Check formatting implementation"

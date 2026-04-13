@@ -1,0 +1,392 @@
+milestone: m3
+name: Build Service & Init Command
+generated: "2026-04-13T00:00:00Z"
+
+style_anchors:
+  - path: docs/style-anchors/cobra-command-structure.md
+    description: |
+      Command structure for init command with interactive prompts and flags.
+  - path: docs/style-anchors/file-operations.md
+    description: |
+      Directory creation, managed section replacement, and backup creation
+      for initialization workflow.
+  - path: docs/style-anchors/json-config-handling.md
+    description: |
+      Creating default config.json and rule file templates.
+  - path: docs/style-anchors/table-driven-testing.md
+    description: |
+      Testing command execution with mocked prompts.
+
+global_constraints:
+  allowed_patterns:
+    - "Use Cobra's command structure for init command"
+    - "Generate markdown with proper formatting"
+    - "Interactive prompts with clear defaults"
+    - "Success messages with next steps"
+    - "HTML comment markers for managed sections"
+  forbidden_patterns:
+    - "Hardcoded markdown templates in code"
+    - "Non-interactive mode without --yes flag"
+    - "Silent failures during initialization"
+    - "Overwriting existing .agent-instruction without warning"
+  tdd_required: true
+  max_task_duration_minutes: 150
+  commit_strategy: "Commit after each task"
+
+quality_gates:
+  - stage: pre-commit
+    commands:
+      - go fmt ./...
+      - go vet ./...
+      - go test ./...
+  - stage: task-completion
+    criteria:
+      - All tests passing
+      - Generated markdown is valid
+      - Interactive prompts work correctly
+      - Files created with correct structure
+
+tasks:
+  - id: m3-001
+    name: Implement markdown generation for instructions
+    description: |
+      Create builder that converts Instruction arrays to properly formatted
+      markdown with headings, rules, and references.
+    estimate_minutes: 90
+    type: code
+    dependencies: []
+    files:
+      create:
+        - internal/builder/markdown.go
+        - internal/builder/markdown_test.go
+    instructions: |
+      **Objective:**
+      Generate well-formatted markdown from instruction data structures
+
+      **Implementation Steps:**
+      1. Implement InstructionsToMarkdown(instructions []Instruction) string:
+         - For each instruction:
+           - If heading: add as markdown heading (## or ###)
+           - Add rule text with proper formatting
+           - If references: add as bullet list with links
+         - Return formatted markdown string
+      2. Implement formatReference(ref Reference) string:
+         - Format as: "- [title](path)"
+      3. Handle edge cases:
+         - Empty instructions array
+         - Missing headings
+         - Missing references
+         - Special markdown characters (escape if needed)
+      4. Write table-driven tests with expected markdown output
+
+      **Constraints:**
+      - Generate clean, readable markdown
+      - Preserve exact rule text formatting
+      - Follow standard markdown conventions
+      - Handle multi-line rules correctly
+
+      **TDD Checklist:**
+      - [ ] Write test for simple instruction
+      - [ ] Implement InstructionsToMarkdown
+      - [ ] Test with headings
+      - [ ] Test with references
+      - [ ] Test edge cases
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/builder -v -run TestMarkdown
+      ```
+      Expected: Valid markdown generated for all cases
+
+    validation:
+      commands:
+        - go test ./internal/builder -v -run TestMarkdown
+      expected_output: "PASS"
+      on_failure: "Review markdown generation logic"
+
+  - id: m3-002
+    name: Implement managed section replacement
+    description: |
+      Build logic to wrap generated content with markers and merge with
+      existing user content outside managed sections.
+    estimate_minutes: 75
+    type: code
+    dependencies: [m3-001]
+    files:
+      create:
+        - internal/builder/managed.go
+        - internal/builder/managed_test.go
+      touch_only:
+        - internal/files/managed.go
+    instructions: |
+      **Objective:**
+      Combine generated content with user content preserving both
+
+      **Implementation Steps:**
+      1. Implement WrapWithMarkers(content string) string:
+         - Add BEGIN marker
+         - Add generated content
+         - Add END marker
+         - Return wrapped content
+      2. Implement BuildManagedFile(generated string, existing *ManagedContent) string:
+         - If no existing content: return wrapped generated
+         - Otherwise: combine existing.before + wrapped + existing.after
+         - Preserve all user content
+      3. Write tests for:
+         - New file (no existing content)
+         - Existing file with managed section
+         - Existing file with user content before/after
+      4. Verify no content loss
+
+      **Constraints:**
+      - Never lose user content
+      - Always use consistent markers
+      - Preserve whitespace in user content
+      - Handle empty sections gracefully
+
+      **TDD Checklist:**
+      - [ ] Write test for new file
+      - [ ] Implement WrapWithMarkers
+      - [ ] Test existing file preservation
+      - [ ] Test edge cases
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/builder -v -run TestManaged
+      ```
+      Expected: User content always preserved
+
+    validation:
+      commands:
+        - go test ./internal/builder -v -run TestManaged
+      expected_output: "PASS"
+      on_failure: "Check content preservation logic"
+
+  - id: m3-003
+    name: Create BuildService with file generation
+    description: |
+      Implement BuildService that orchestrates instruction resolution,
+      markdown generation, and file writing.
+    estimate_minutes: 90
+    type: code
+    dependencies: [m3-002]
+    files:
+      create:
+        - internal/builder/service.go
+        - internal/builder/service_test.go
+    instructions: |
+      **Objective:**
+      Provide high-level API for building instruction files
+
+      **Implementation Steps:**
+      1. Define BuildService interface:
+         - BuildFile(rulePath, outputPath string, framework string) error
+         - GenerateForPackage(packagePath string) error
+      2. Implement DefaultBuildService struct:
+         - Embed RuleService for rule resolution
+         - Embed FileService for file operations
+      3. Implement BuildFile:
+         - Resolve imports from rule file
+         - Generate markdown
+         - Read existing file if present
+         - Parse managed sections
+         - Merge generated with existing
+         - Write atomically with backup
+      4. Write integration tests end-to-end
+
+      **Constraints:**
+      - Coordinate all services properly
+      - Atomic operations with rollback on error
+      - Clear error messages with context
+      - Test with real file operations (use temp dirs)
+
+      **TDD Checklist:**
+      - [ ] Define BuildService interface
+      - [ ] Write test for BuildFile workflow
+      - [ ] Implement BuildFile orchestration
+      - [ ] Test error handling
+      - [ ] Test rollback on failure
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/builder -v -run TestBuildService
+      ```
+      Expected: End-to-end file generation works
+
+    validation:
+      commands:
+        - go test ./internal/builder -v
+      expected_output: "PASS"
+      on_failure: "Check service orchestration"
+
+  - id: m3-004
+    name: Implement init command with interactive prompts
+    description: |
+      Create init command that guides user through setup with prompts for
+      frameworks, package mode, and backup decisions.
+    estimate_minutes: 120
+    type: code
+    dependencies: [m3-003]
+    files:
+      create:
+        - internal/commands/init.go
+        - internal/commands/init_test.go
+        - internal/commands/prompts.go
+      modify:
+        - internal/commands/root.go
+    instructions: |
+      **Objective:**
+      Implement interactive init command following specification
+
+      **Implementation Steps:**
+      1. Create init command with Cobra:
+         - Use: "init"
+         - Short: "Initialize agent-instruction in repository"
+         - Long: detailed description
+         - Flags: --non-interactive, --frameworks, --packages
+      2. Implement interactive prompts (when not --non-interactive):
+         - Check if .agent-instruction exists (error if yes)
+         - Scan for existing CLAUDE.md/AGENTS.md files
+         - If found: prompt for backup (Y/n default Y)
+         - Prompt for frameworks: [claude, agents, both] (default: both)
+         - Prompt for package mode: [auto, manual] (default: auto)
+         - If manual: prompt for comma-separated paths
+      3. Create directory structure:
+         - .agent-instruction/
+         - .agent-instruction/config.json
+         - .agent-instruction/rules/
+         - .agent-instruction/rules/global.json (with template)
+      4. Display success message with next steps
+      5. Write tests using mock prompts
+
+      **Constraints:**
+      - Follow algorithm: technical-requirements.yaml:475-508
+      - ONLY create .agent-instruction if not exists
+      - Respect --non-interactive flag
+      - Clear prompts with defaults shown
+      - See: docs/style-anchors/cobra-command-structure.md for command patterns
+      - See: docs/style-anchors/file-operations.md for directory creation
+
+      **TDD Checklist:**
+      - [ ] Write test for directory creation
+      - [ ] Implement init command structure
+      - [ ] Test interactive prompts (mocked)
+      - [ ] Test --non-interactive mode
+      - [ ] Test error when already initialized
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/commands -v -run TestInit
+      ```
+      Expected: Init command works in all modes
+
+    validation:
+      commands:
+        - go test ./internal/commands -v -run TestInit
+      expected_output: "PASS"
+      on_failure: "Review init command logic"
+
+  - id: m3-005
+    name: Create template files for initial setup
+    description: |
+      Build template generation for config.json and global.json with
+      helpful comments and example structure.
+    estimate_minutes: 60
+    type: code
+    dependencies: [m3-004]
+    files:
+      create:
+        - internal/builder/templates.go
+        - internal/builder/templates_test.go
+    instructions: |
+      **Objective:**
+      Generate helpful template files during initialization
+
+      **Implementation Steps:**
+      1. Implement GenerateConfigTemplate(frameworks []string, packages []string) *Config:
+         - Create Config struct with provided values
+         - Set version to "1.0.0"
+      2. Implement GenerateGlobalRuleTemplate() *RuleFile:
+         - Create RuleFile with:
+           - Title: "Global Rules"
+           - Example instructions with comments
+           - Empty imports array
+      3. Marshal to JSON with indentation
+      4. Write tests verifying valid JSON output
+
+      **Constraints:**
+      - Generate valid JSON
+      - Include helpful comments in example
+      - Use 2-space indentation
+      - Templates should be immediately usable
+
+      **TDD Checklist:**
+      - [ ] Write test for config template
+      - [ ] Implement GenerateConfigTemplate
+      - [ ] Test global rule template
+      - [ ] Verify JSON is valid
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/builder -v -run TestTemplates
+      ```
+      Expected: Valid templates generated
+
+    validation:
+      commands:
+        - go test ./internal/builder -v -run TestTemplate
+      expected_output: "PASS"
+      on_failure: "Check template generation"
+
+  - id: m3-006
+    name: Add init command integration tests
+    description: |
+      Create end-to-end tests for init command using temporary directories
+      and verifying correct file creation.
+    estimate_minutes: 75
+    type: test
+    dependencies: [m3-005]
+    files:
+      create:
+        - internal/commands/init_integration_test.go
+    instructions: |
+      **Objective:**
+      Verify init command works correctly end-to-end
+
+      **Implementation Steps:**
+      1. Create test using temp directory:
+         - Run init command with --non-interactive
+         - Verify .agent-instruction/ created
+         - Verify config.json has correct structure
+         - Verify rules/global.json created
+      2. Test backup creation:
+         - Create existing CLAUDE.md
+         - Run init
+         - Verify backup created
+      3. Test error when already initialized:
+         - Run init twice
+         - Verify error on second run
+      4. Test with different framework options
+
+      **Constraints:**
+      - Use temporary directories
+      - Clean up after tests
+      - Test all initialization paths
+      - Verify file permissions
+
+      **Validation:**
+      ```bash
+      go test ./internal/commands -v -run TestInitIntegration
+      ```
+      Expected: All integration tests pass
+
+    validation:
+      commands:
+        - go test ./internal/commands -v -run TestInitIntegration
+      expected_output: "PASS"
+      on_failure: "Fix integration test failures"

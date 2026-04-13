@@ -1,0 +1,402 @@
+milestone: m2
+name: Rule Management & Import Resolution
+generated: "2026-04-13T00:00:00Z"
+
+style_anchors:
+  - path: docs/style-anchors/graph-traversal-cycle-detection.md
+    description: |
+      Import resolution algorithm using depth-first traversal with path stack
+      for cycle detection, including topological sort patterns.
+  - path: docs/style-anchors/json-config-handling.md
+    description: |
+      Loading rule files with imports field for resolution.
+  - path: docs/style-anchors/error-handling.md
+    description: |
+      Cycle detection error messages showing import chain.
+  - path: docs/style-anchors/table-driven-testing.md
+    description: |
+      Testing import resolution including cycle scenarios.
+
+global_constraints:
+  allowed_patterns:
+    - "Use depth-first traversal for import resolution"
+    - "Track visited nodes to detect cycles"
+    - "Use path stack for cycle detection"
+    - "Return descriptive cycle error messages"
+    - "Merge instructions in import order"
+  forbidden_patterns:
+    - "Breadth-first traversal (use depth-first)"
+    - "Modifying instructions during traversal"
+    - "Silent cycle handling"
+    - "Global state for tracking"
+  tdd_required: true
+  max_task_duration_minutes: 150
+  commit_strategy: "Commit after each task"
+
+quality_gates:
+  - stage: pre-commit
+    commands:
+      - go fmt ./...
+      - go vet ./...
+      - go test ./...
+  - stage: task-completion
+    criteria:
+      - All tests passing
+      - Cycle detection working correctly
+      - Import order preserved
+      - Error messages are clear
+
+tasks:
+  - id: m2-001
+    name: Implement path resolution for imports
+    description: |
+      Create path resolution logic that handles relative and absolute import
+      paths, resolving them correctly based on the importing file's location.
+    estimate_minutes: 75
+    type: code
+    dependencies: []
+    files:
+      create:
+        - internal/rules/paths.go
+        - internal/rules/paths_test.go
+    instructions: |
+      **Objective:**
+      Resolve import paths relative to importing file location
+
+      **Implementation Steps:**
+      1. Implement ResolvePath(importPath, baseDir string) (string, error):
+         - Handle relative paths (./rules/test.json)
+         - Handle absolute paths (/path/to/rule.json)
+         - Resolve to absolute path
+         - Normalize path separators
+      2. Implement ResolveImportPath(importPath, currentFilePath string) (string, error):
+         - Get directory of current file
+         - Resolve import relative to that directory
+         - Return absolute path
+      3. Write table-driven tests for:
+         - Relative imports
+         - Absolute imports
+         - Nested directory imports
+         - Edge cases (empty paths, etc.)
+
+      **Constraints:**
+      - ONLY use filepath.Abs, filepath.Dir, filepath.Join
+      - Handle both Unix and potential Windows paths
+      - Return errors for invalid paths
+      - Normalize all paths
+
+      **TDD Checklist:**
+      - [ ] Write test for relative path resolution
+      - [ ] Implement ResolvePath
+      - [ ] Test absolute paths
+      - [ ] Test nested directories
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/rules -v -run TestResolvePath
+      ```
+      Expected: All path resolutions correct
+
+    validation:
+      commands:
+        - go test ./internal/rules -v -run TestPath
+      expected_output: "PASS"
+      on_failure: "Check path resolution logic"
+
+  - id: m2-002
+    name: Implement cycle detection algorithm
+    description: |
+      Build cycle detection using path stack tracking during depth-first
+      traversal of import graph.
+    estimate_minutes: 90
+    type: code
+    dependencies: [m2-001]
+    files:
+      create:
+        - internal/rules/cycle.go
+        - internal/rules/cycle_test.go
+    instructions: |
+      **Objective:**
+      Detect import cycles and provide clear error messages
+
+      **Implementation Steps:**
+      1. Define ImportContext struct:
+         - visited: map[string]bool (all seen paths)
+         - pathStack: []string (current import chain)
+      2. Implement detectCycle(path string, ctx *ImportContext) error:
+         - Check if path in pathStack (cycle found)
+         - If cycle: build error message showing chain
+         - Return nil if no cycle
+      3. Implement buildCycleError(stack []string, newPath string) error:
+         - Format as: "Import cycle: A → B → C → A"
+      4. Write tests for:
+         - Direct cycle (A imports B, B imports A)
+         - Indirect cycle (A → B → C → A)
+         - No cycle (normal imports)
+         - Self-import
+
+      **Constraints:**
+      - Use path stack for detection (not just visited set)
+      - Error message must show full cycle path
+      - See: docs/style-anchors/graph-traversal-cycle-detection.md for cycle detection
+      - See: docs/style-anchors/error-handling.md for error message format
+      - No false positives
+
+      **TDD Checklist:**
+      - [ ] Write test for direct cycle
+      - [ ] Implement cycle detection
+      - [ ] Test indirect cycles
+      - [ ] Test valid import chains
+      - [ ] Test error message format
+      - [ ] All tests passing
+
+      **Style Anchor Reference:**
+      See docs/style-anchors/graph-traversal-cycle-detection.md and error-handling.md
+
+      **Validation:**
+      ```bash
+      go test ./internal/rules -v -run TestCycle
+      ```
+      Expected: All cycles detected, no false positives
+
+    validation:
+      commands:
+        - go test ./internal/rules -v -run TestCycle
+      expected_output: "PASS"
+      on_failure: "Review cycle detection logic"
+
+  - id: m2-003
+    name: Implement instruction merging logic
+    description: |
+      Create logic to merge instructions from multiple rule files in correct
+      order, preserving headings and structure.
+    estimate_minutes: 75
+    type: code
+    dependencies: []
+    files:
+      create:
+        - internal/rules/merge.go
+        - internal/rules/merge_test.go
+      touch_only:
+        - internal/rules/types.go
+    instructions: |
+      **Objective:**
+      Merge instruction arrays from multiple sources in correct order
+
+      **Implementation Steps:**
+      1. Implement MergeInstructions(sources [][]Instruction) []Instruction:
+         - Flatten arrays in order
+         - Preserve all instructions as-is
+         - No deduplication (user controls via structure)
+         - Maintain heading hierarchy
+      2. Handle empty arrays gracefully
+      3. Write tests for:
+         - Single source
+         - Multiple sources
+         - Empty sources
+         - Order preservation
+
+      **Constraints:**
+      - Preserve exact order from import resolution
+      - No modification of instruction content
+      - No deduplication logic
+      - Follow merge strategy: technical-requirements.yaml:469-474
+
+      **TDD Checklist:**
+      - [ ] Write test for single source merge
+      - [ ] Implement MergeInstructions
+      - [ ] Test multiple sources
+      - [ ] Verify order preservation
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/rules -v -run TestMerge
+      ```
+      Expected: Instructions merged in correct order
+
+    validation:
+      commands:
+        - go test ./internal/rules -v -run TestMerge
+      expected_output: "PASS"
+      on_failure: "Check merge order logic"
+
+  - id: m2-004
+    name: Implement depth-first import resolution
+    description: |
+      Build main import resolution algorithm using depth-first traversal with
+      cycle detection and instruction merging.
+    estimate_minutes: 120
+    type: code
+    dependencies: [m2-001, m2-002, m2-003]
+    files:
+      create:
+        - internal/rules/resolver.go
+        - internal/rules/resolver_test.go
+      modify:
+        - internal/rules/cycle.go
+    instructions: |
+      **Objective:**
+      Implement complete import resolution with cycle detection
+
+      **Implementation Steps:**
+      1. Implement ResolveImports(rootFile string, configSvc config.ConfigService) ([]Instruction, error):
+         - Initialize ImportContext (visited, pathStack)
+         - Call resolveRecursive with root file
+         - Return merged instructions
+      2. Implement resolveRecursive(filePath string, ctx *ImportContext) ([]Instruction, error):
+         - Check for cycle using detectCycle
+         - Add path to pathStack
+         - Load rule file
+         - For each import in file:
+           - Resolve import path
+           - Recursively resolve
+           - Collect instructions
+         - Append current file's local instructions
+         - Remove path from pathStack
+         - Add to visited set
+         - Return merged instructions
+      3. Write integration tests with test fixtures:
+         - Simple import chain
+         - Diamond dependency (A imports B and C, both import D)
+         - Cycle detection
+         - Deep nesting
+
+      **Constraints:**
+      - ONLY use depth-first traversal
+      - See: docs/style-anchors/graph-traversal-cycle-detection.md for DFS algorithm
+      - Path stack must be cleaned up on recursion exit
+      - Visited set prevents duplicate processing
+
+      **TDD Checklist:**
+      - [ ] Write test for simple import chain
+      - [ ] Implement resolveRecursive
+      - [ ] Test diamond dependency
+      - [ ] Test cycle detection integration
+      - [ ] Test deep nesting
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/rules -v -run TestResolve
+      ```
+      Expected: All import scenarios resolved correctly
+
+    validation:
+      commands:
+        - go test ./internal/rules -v -run TestResolve
+      expected_output: "PASS"
+      on_failure: "Review import resolution algorithm"
+
+  - id: m2-005
+    name: Create RuleService interface and implementation
+    description: |
+      Build unified RuleService interface that provides high-level API for
+      rule management and import resolution.
+    estimate_minutes: 75
+    type: code
+    dependencies: [m2-004]
+    files:
+      create:
+        - internal/rules/service.go
+        - internal/rules/service_test.go
+    instructions: |
+      **Objective:**
+      Provide clean API for rule operations used by commands
+
+      **Implementation Steps:**
+      1. Define RuleService interface:
+         - ResolveRules(rootPath string) ([]Instruction, error)
+         - LoadRuleFile(path string) (*RuleFile, error)
+         - SaveRuleFile(path string, rule *RuleFile) error
+         - AddInstruction(rulePath string, instruction Instruction) error
+      2. Implement DefaultRuleService struct:
+         - Embed ConfigService for file operations
+         - Use resolver for import resolution
+      3. Implement AddInstruction:
+         - Load rule file
+         - Append instruction
+         - Save file atomically
+      4. Write service-level integration tests
+
+      **Constraints:**
+      - Use interface for testability
+      - All operations must be safe (atomic)
+      - Errors must be descriptive
+      - Service coordinates multiple components
+
+      **TDD Checklist:**
+      - [ ] Define RuleService interface
+      - [ ] Write test for ResolveRules
+      - [ ] Implement DefaultRuleService
+      - [ ] Test AddInstruction workflow
+      - [ ] All tests passing
+
+      **Validation:**
+      ```bash
+      go test ./internal/rules -v
+      ```
+      Expected: All service tests pass
+
+    validation:
+      commands:
+        - go test ./internal/rules -v
+      expected_output: "PASS"
+      on_failure: "Check service integration"
+
+  - id: m2-006
+    name: Add comprehensive edge case testing
+    description: |
+      Create extensive test suite covering all edge cases for import resolution
+      including malformed files, missing imports, and permission issues.
+    estimate_minutes: 90
+    type: test
+    dependencies: [m2-005]
+    files:
+      create:
+        - internal/rules/edgecases_test.go
+      modify:
+        - testdata/rules/cycle-a.json
+        - testdata/rules/cycle-b.json
+        - testdata/rules/missing-import.json
+    instructions: |
+      **Objective:**
+      Ensure robust handling of all edge cases and error conditions
+
+      **Implementation Steps:**
+      1. Create test fixtures for edge cases:
+         - Cycle: A imports B, B imports A
+         - Missing import file
+         - Malformed JSON in import
+         - Empty rule files
+         - Deep nesting (10+ levels)
+      2. Write table-driven tests for:
+         - Import file not found
+         - Import file has invalid JSON
+         - Import cycle detection
+         - Self-import
+         - Empty imports array
+         - Null/missing fields
+      3. Verify error messages are helpful
+      4. Test performance with large import graphs
+
+      **Constraints:**
+      - Test all error paths
+      - Verify error messages contain context
+      - Test with realistic fixtures
+      - Include performance benchmarks
+
+      **Validation:**
+      ```bash
+      go test ./internal/rules -v -run TestEdgeCases
+      go test ./internal/rules -bench=.
+      ```
+      Expected: All edge cases handled, good performance
+
+    validation:
+      commands:
+        - go test ./internal/rules -v
+        - go test ./internal/rules -bench=.
+      expected_output: "All tests pass, benchmarks complete"
+      on_failure: "Address failing edge cases"

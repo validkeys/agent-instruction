@@ -1,0 +1,530 @@
+implementation_plan_review:
+  metadata:
+    plan_files:
+      - milestones.yaml
+      - milestone-m0.tasks.yaml
+      - milestone-m1.tasks.yaml
+      - milestone-m2.tasks.yaml
+      - milestone-m3.tasks.yaml
+      - milestone-m4.tasks.yaml
+      - milestone-m5.tasks.yaml
+      - milestone-m6.tasks.yaml
+      - milestone-m7.tasks.yaml
+    review_date: "2026-04-13T00:00:00Z"
+    reviewer: implementation-plan-review skill
+    business_requirements: ./business-requirements.yaml
+    technical_requirements: ./technical-requirements.yaml
+
+  overall_scores:
+    structure: 9/10
+    best_practices_compliance: 7/10
+    task_sizing: 10/10
+    completeness: 9/10
+    alignment: 10/10
+    development_readiness: 8/10
+
+  summary:
+    total_milestones: 8
+    total_tasks: 46
+    estimated_total_duration: 14-21 days
+    critical_path_duration: 14-21 days (linear dependency chain)
+
+    task_sizing_summary:
+      too_small: 0
+      optimal: 46  # All tasks 30-150 minutes
+      too_large: 0
+      optimal_percentage: 100%
+
+    compliance_summary:
+      style_anchors_present: 8/8 milestones
+      style_anchors_sufficient: 3/8 milestones (M0 has 3, others have 1)
+      tdd_checklists_present: 38/38 code tasks
+      drift_policies_present: 0/46 tasks (implicit through constraints)
+      quality_gates_defined: yes (all milestones)
+
+  critical_issues: []
+
+  high_priority_issues:
+    - category: style_anchors
+      severity: high
+      issue: "Insufficient style anchors in milestones M1, M2, M3, M4, M5, M7"
+      affected_items:
+        - milestone-m1.tasks.yaml (1 anchor, need 2-3)
+        - milestone-m2.tasks.yaml (1 anchor, need 2-3)
+        - milestone-m3.tasks.yaml (1 anchor, need 2-3)
+        - milestone-m4.tasks.yaml (1 anchor, need 2-3)
+        - milestone-m5.tasks.yaml (1 anchor, need 2-3)
+        - milestone-m7.tasks.yaml (1 anchor but too vague)
+      recommendation: |
+        Add 1-2 more concrete code anchors to each milestone. Style anchors should:
+        - Point to actual code files (not YAML specs)
+        - Include specific line numbers
+        - Show complete examples (code + tests + README where applicable)
+
+        Suggested additions:
+        - M1: Add test anchor showing file operation testing patterns
+        - M2: Replace YAML anchor with actual Go import resolution code example
+        - M3: Add markdown generation example and test anchor
+        - M4: Replace YAML anchor with actual directory traversal code example
+        - M5: Add interactive prompt example and formatting helper anchor
+        - M7: Replace vague "entire repository" with specific test examples
+      guidance: |
+        Best practice: 2-3 style anchors per milestone task file showing:
+        1. Implementation pattern example
+        2. Test pattern example
+        3. Documentation/usage example (where applicable)
+
+    - category: style_anchor_quality
+      severity: high
+      issue: "Several style anchors point to technical-requirements.yaml instead of code"
+      affected_items:
+        - M2: technical-requirements.yaml:416-474
+        - M4: technical-requirements.yaml:416-440
+        - M6: technical-requirements.yaml:510-577
+      recommendation: |
+        Replace YAML specification anchors with actual code implementations for M2 and M4.
+        M6 is acceptable (skill definition task) but should add example skill for reference.
+
+        Specifically:
+        - M2: Find actual cycle detection code in cobra or another Go CLI tool
+        - M4: Find actual directory walker with filtering in cobra or similar
+      guidance: |
+        Style anchors should demonstrate "how" not "what". Specifications tell what to build;
+        style anchors show how to build it using proven patterns.
+
+  medium_priority_issues:
+    - category: drift_prevention
+      severity: medium
+      issue: "Drift policy not explicitly stated in task instructions"
+      affected_items: [all 46 tasks]
+      recommendation: |
+        While constraints include "forbidden_patterns", explicit drift policy statements
+        could be added to critical tasks:
+
+        Add to tasks touching >3 files:
+        - m2-004 (import resolution - critical algorithm)
+        - m3-004 (init command - multiple file creation)
+        - m4-004 (build command - orchestration)
+        - m7-008 (E2E testing - comprehensive)
+
+        Example addition to instructions:
+        "**Drift Policy:**
+        - STOP if needing to modify >3 unexpected files
+        - STOP if needing dependencies beyond allowed list
+        - STOP and document if tests fail and fix unclear
+        - Revert and report before adjusting approach"
+      guidance: |
+        Explicit drift statements prevent scope creep during implementation.
+        Most valuable for complex orchestration and integration tasks.
+
+    - category: file_scope
+      severity: medium
+      issue: "Some tasks could be more explicit about file boundaries"
+      affected_items:
+        - m1-006 (modifies 4 files across 2 packages)
+        - m3-004 (creates 3 files, modifies 1)
+        - m4-004 (creates 2 files, modifies 1)
+      recommendation: |
+        Make file scope constraints more prominent:
+        - Add "ONLY modify these N files" to instruction constraints
+        - Add "If needing to touch additional files, STOP" guidance
+        - List "touch_only" files that may be read but not modified
+      guidance: |
+        Clear file boundaries prevent scope expansion during implementation.
+
+  best_practices_violations:
+    style_anchors:
+      - issue: "M7 anchor 'entire repository' is too vague"
+        affected_tasks: [milestone-m7.tasks.yaml]
+        guidance: |
+          Provide specific examples:
+          - /Users/kydavis/Sites/ai-use-repos/cobra/cobra/cmd/helpers_test.go:1-50 (table-driven tests)
+          - /Users/kydavis/Sites/ai-use-repos/cobra/.github/workflows/test.yml:1-100 (CI/CD)
+          - /Users/kydavis/Sites/ai-use-repos/cobra/README.md:1-100 (documentation style)
+
+      - issue: "Non-code anchors used where code examples needed"
+        affected_tasks: [m2, m4]
+        guidance: |
+          Technical requirements are valuable context but not style anchors.
+          Style anchors demonstrate implementation patterns through working code.
+
+    task_sizing:
+      - issue: "None - all tasks are optimally sized (30-150 minutes)"
+        affected_tasks: []
+        guidance: "Excellent task sizing throughout the plan."
+
+    tdd_requirements:
+      - issue: "None - TDD checklists present in all code tasks"
+        affected_tasks: []
+        guidance: "Strong TDD discipline throughout the plan."
+
+    drift_prevention:
+      - issue: "Implicit rather than explicit drift policies"
+        affected_tasks: [all code tasks]
+        guidance: |
+          Consider adding explicit drift statements to complex tasks:
+          - Import resolution (m2-004)
+          - Package discovery (m4-001, m4-004)
+          - E2E testing (m7-008)
+
+    quality_gates:
+      - issue: "None - quality gates well-defined at milestone level"
+        affected_tasks: []
+        guidance: "Consistent quality gates across all milestones."
+
+  gaps:
+    missing_coverage:
+      requirements: []  # All FR-1 through FR-10 covered
+      task_types: []    # All types present: code, test, docs, config
+
+    missing_elements: []  # No critical gaps identified
+
+  strong_areas:
+    - "Excellent task sizing - 100% of tasks in optimal 30-150 minute range"
+    - "Complete requirements coverage - all FR-1 through FR-10 mapped"
+    - "Strong TDD discipline - all code tasks have TDD checklists"
+    - "Clear dependency chain - logical build order from foundation to polish"
+    - "Comprehensive testing - M7 includes E2E, integration, and unit tests"
+    - "Well-defined quality gates - consistent across all milestones"
+    - "Realistic timeline - 14-21 days matches business constraint"
+    - "Single feature branch strategy appropriate for technical dependencies"
+
+  optimization_opportunities:
+    - type: style_anchor_enhancement
+      description: "Add more concrete code anchors to milestones M1-M5, M7"
+      benefit: "Better implementation guidance, reduced drift, faster development"
+      affected_items: [M1, M2, M3, M4, M5, M7]
+      effort: "30-60 minutes to research and add 1-2 anchors per milestone"
+
+    - type: drift_policy_clarification
+      description: "Add explicit drift policies to complex orchestration tasks"
+      benefit: "Clearer stop criteria, better scope control, faster issue detection"
+      affected_items: [m2-004, m3-004, m4-004, m7-008]
+      effort: "15-30 minutes to add explicit statements to 4 tasks"
+
+    - type: file_scope_hardening
+      description: "Make file scope boundaries more explicit in multi-file tasks"
+      benefit: "Prevent scope creep, clearer implementation boundaries"
+      affected_items: [m1-006, m3-004, m4-004]
+      effort: "10-20 minutes to clarify constraints in 3 tasks"
+
+  specific_recommendations:
+    - priority: high
+      category: style_anchors
+      recommendation: "Add 1-2 concrete code anchors to each milestone M1-M5, M7"
+      rationale: |
+        Style anchors are the primary mechanism for preventing architectural drift.
+        Single anchors per milestone provide insufficient pattern guidance.
+      action_items:
+        - "M1: Add /Users/kydavis/Sites/ai-use-repos/cobra/cobra/cmd/helpers_test.go:20-60 showing file test patterns"
+        - "M2: Find and add actual cycle detection algorithm example from Go stdlib or cobra"
+        - "M3: Add markdown builder test example from cobra or similar CLI tool"
+        - "M4: Find actual filepath.Walk usage with filtering from cobra codebase"
+        - "M5: Add interactive prompt example from cobra/cmd/*.go"
+        - "M7: Replace vague anchor with specific test, CI, and doc examples"
+      estimated_effort: "60 minutes total"
+
+    - priority: medium
+      category: drift_prevention
+      recommendation: "Add explicit drift policy statements to 4 complex tasks"
+      rationale: |
+        Complex orchestration tasks (import resolution, build, E2E) have higher
+        drift risk due to interconnected components and broad scope.
+      action_items:
+        - "m2-004: Add drift policy for import resolution algorithm"
+        - "m3-004: Add drift policy for multi-file init command"
+        - "m4-004: Add drift policy for build orchestration"
+        - "m7-008: Add drift policy for E2E testing scope"
+      estimated_effort: "30 minutes total"
+
+    - priority: low
+      category: file_scope
+      recommendation: "Clarify file scope boundaries in 3 multi-file tasks"
+      rationale: |
+        Tasks touching 4+ files should have explicit "ONLY these files" constraints
+        to prevent scope expansion during implementation.
+      action_items:
+        - "m1-006: Add 'ONLY modify these 4 files' constraint"
+        - "m3-004: Add 'ONLY create these 3 files, modify these 1 file' constraint"
+        - "m4-004: Add clear file boundary statement"
+      estimated_effort: "20 minutes total"
+
+  readiness_assessment:
+    ready_for_development: "yes-with-modifications"
+    blocking_issues: 0
+    high_priority_issues: 2
+    medium_priority_issues: 2
+    recommended_modifications: 3
+
+    estimated_effort_to_fix:
+      high_priority: "90 minutes (60m anchors + 30m drift policies)"
+      medium_priority: "50 minutes (30m drift + 20m file scope)"
+      total: "140 minutes (~2.5 hours)"
+
+    timeline_impact:
+      if_fixed: "14-21 days (no change - fixes are in planning phase)"
+      if_not_fixed: "15-23 days (potential 1-2 day drift from insufficient anchors)"
+
+    development_confidence:
+      with_fixes: "high - plan will guide implementation smoothly"
+      without_fixes: "medium-high - may experience some drift in M2, M4, M7"
+
+  requirement_coverage_matrix:
+    FR-1:
+      description: "Init command creates .agent-instruction structure"
+      covered_by: [m3-004, m3-005, m3-006]
+      coverage: complete
+
+    FR-2:
+      description: "Backup existing CLAUDE.md/AGENTS.md files"
+      covered_by: [m1-002, m3-004, m3-006]
+      coverage: complete
+
+    FR-3:
+      description: "Build command generates/updates instruction files"
+      covered_by: [m3-001, m3-002, m3-003, m4-004, m4-006]
+      coverage: complete
+
+    FR-4:
+      description: "Support global and package-level configurations"
+      covered_by: [m4-001, m4-002, m4-004, m4-006]
+      coverage: complete
+
+    FR-5:
+      description: "Add command with CLI arguments"
+      covered_by: [m5-001, m5-003, m5-004]
+      coverage: complete
+
+    FR-6:
+      description: "Add to global/package rules with interactive selection"
+      covered_by: [m5-002, m5-004]
+      coverage: complete
+
+    FR-7:
+      description: "List command displays rules"
+      covered_by: [m5-005, m5-006]
+      coverage: complete
+
+    FR-8:
+      description: "JSON configuration with imports"
+      covered_by: [m0-002, m1-005, m2-001, m2-002, m2-003, m2-004]
+      coverage: complete
+
+    FR-9:
+      description: "Support CLAUDE.md and AGENTS.md"
+      covered_by: [m3-001, m3-002, m4-005]
+      coverage: complete
+
+    FR-10:
+      description: "Claude Code skill"
+      covered_by: [m6-001, m6-002, m6-003, m6-004, m6-005, m6-006]
+      coverage: complete
+
+  dependency_analysis:
+    critical_path:
+      - m0  # Foundation (1-2 days)
+      - m1  # File Services (2-3 days)
+      - m2  # Rule Management (2-3 days)
+      - m3  # Build & Init (2-3 days)
+      - m4  # Build Command (2-3 days)
+      - m5  # Add & List (1-2 days)
+      - m6  # Claude Skill (1 day)
+      - m7  # Testing & Polish (2-3 days)
+
+    critical_path_duration: "14-21 days"
+
+    parallel_opportunities: []  # Linear dependency chain - no parallelization possible
+
+    dependency_issues: []  # No circular dependencies or issues found
+
+    dependency_rationale: |
+      Single feature branch strategy is appropriate because:
+      - Each milestone depends on foundations from previous milestones
+      - Core data structures (M0) required for all subsequent work
+      - File operations (M1) required before rule management (M2)
+      - Rule management (M2) required before build service (M3)
+      - Init/Build (M3) required before full build command (M4)
+      - All commands (M5) need build infrastructure from M4
+      - Skill (M6) needs working CLI from M5
+      - Testing (M7) needs complete system from M6
+
+      This is a true technical dependency chain with no safe parallelization points.
+
+  task_sizing_detail:
+    by_milestone:
+      m0:
+        tasks: 5
+        total_minutes: 300 (5 hours)
+        average_minutes: 60
+        range: "45-90 minutes"
+        assessment: "Well-sized foundation tasks"
+
+      m1:
+        tasks: 6
+        total_minutes: 465 (7.75 hours)
+        average_minutes: 77.5
+        range: "60-90 minutes"
+        assessment: "Consistent mid-range sizing"
+
+      m2:
+        tasks: 6
+        total_minutes: 525 (8.75 hours)
+        average_minutes: 87.5
+        range: "75-120 minutes"
+        assessment: "Appropriately sized for complexity"
+
+      m3:
+        tasks: 6
+        total_minutes: 480 (8 hours)
+        average_minutes: 80
+        range: "60-120 minutes"
+        assessment: "Well-distributed task sizes"
+
+      m4:
+        tasks: 6
+        total_minutes: 570 (9.5 hours)
+        average_minutes: 95
+        range: "60-120 minutes"
+        assessment: "Larger tasks justified by complexity"
+
+      m5:
+        tasks: 6
+        total_minutes: 450 (7.5 hours)
+        average_minutes: 75
+        range: "60-90 minutes"
+        assessment: "Consistent mid-range sizing"
+
+      m6:
+        tasks: 6
+        total_minutes: 330 (5.5 hours)
+        average_minutes: 55
+        range: "30-90 minutes"
+        assessment: "Appropriate for configuration/documentation"
+
+      m7:
+        tasks: 9
+        total_minutes: 855 (14.25 hours)
+        average_minutes: 95
+        range: "45-120 minutes"
+        assessment: "Comprehensive testing and polish"
+
+    total_task_hours: 60.25 hours
+    estimated_overhead: 20% (meetings, breaks, context switching)
+    total_project_hours: "72-75 hours"
+    work_days_at_6h: "12-13 days"
+    work_days_at_4h: "18-19 days"
+    estimated_range: "14-21 days (accounting for variability)"
+
+  quality_assessment:
+    code_quality:
+      linting: "golangci-lint configured in M7-002"
+      testing: "80% coverage target in M7-001"
+      tdd: "Required throughout, checklists in all code tasks"
+      patterns: "Table-driven tests following Cobra patterns"
+      rating: "excellent"
+
+    documentation:
+      command_docs: "Comprehensive in M7-005"
+      readme: "Detailed in M7-003"
+      examples: "Real examples in M7-006"
+      contributing: "Included in M7-007"
+      rating: "excellent"
+
+    testing_strategy:
+      unit_tests: "Every code task includes test implementation"
+      integration_tests: "Dedicated integration test tasks in M3, M4, M5"
+      e2e_tests: "Comprehensive E2E in M7-008"
+      coverage_target: "80% minimum"
+      rating: "excellent"
+
+    security:
+      path_validation: "Addressed in M1-006"
+      input_validation: "Config validation in M1-005"
+      atomic_writes: "Implemented in M1-003"
+      gosec_scanning: "Included in CI/CD (M7-004)"
+      rating: "good"
+
+  detailed_findings:
+    structure_validation:
+      status: "passed"
+      findings:
+        - "All 8 milestone files exist and are well-formed YAML"
+        - "All task IDs follow m{n}-{nnn} pattern consistently"
+        - "No duplicate task IDs found"
+        - "All file references are relative and properly scoped"
+        - "Dependencies reference valid milestone/task IDs"
+
+    best_practices_compliance:
+      status: "passed-with-recommendations"
+      findings:
+        - "Style anchors present but insufficient in 5 of 8 milestones"
+        - "TDD checklists consistently applied to all code tasks"
+        - "Task sizing optimal across all 46 tasks (100% in 30-150m range)"
+        - "Quality gates well-defined and consistent"
+        - "Drift policy implicit through constraints, could be more explicit"
+        - "Affirmative instructions used consistently (ONLY, use X, follow Y)"
+
+    task_sizing_analysis:
+      status: "passed"
+      findings:
+        - "Zero tasks under 30 minutes (no trivial tasks)"
+        - "Zero tasks over 150 minutes (no oversized tasks)"
+        - "46 of 46 tasks in optimal range (100%)"
+        - "Average task size: 78 minutes (ideal for focused work)"
+        - "Good distribution across range: 30-45m (6), 60-90m (30), 120m (10)"
+
+    drift_policy_compliance:
+      status: "passed-with-recommendations"
+      findings:
+        - "Forbidden patterns specified in global constraints"
+        - "Allowed patterns specified positively"
+        - "File scopes generally clear with create/modify/touch_only"
+        - "Validation commands provide checkpoints"
+        - "Could benefit from explicit 'STOP if' statements in complex tasks"
+
+    dependency_analysis:
+      status: "passed"
+      findings:
+        - "Linear dependency chain appropriate for technical constraints"
+        - "No circular dependencies detected"
+        - "Each milestone builds logically on previous foundations"
+        - "No unnecessary dependencies that could be parallelized"
+        - "Single feature branch strategy justified by dependency chain"
+
+    coverage_analysis:
+      status: "passed"
+      findings:
+        - "All 10 functional requirements (FR-1 through FR-10) covered"
+        - "All non-functional requirements addressed"
+        - "All personas and use cases supported"
+        - "No requirements gaps identified"
+        - "Complete command set: init, build, add, list"
+
+conclusion: |
+  **Overall Assessment: READY FOR DEVELOPMENT WITH MINOR IMPROVEMENTS**
+
+  This is a **well-structured, thoughtfully planned implementation** that demonstrates:
+  - Excellent task sizing discipline (100% optimal)
+  - Complete requirements coverage
+  - Strong TDD commitment
+  - Realistic timeline (14-21 days)
+  - Appropriate single feature branch strategy
+
+  **Recommended Actions Before Starting Development:**
+
+  1. **HIGH PRIORITY** (90 minutes):
+     - Add 1-2 concrete code anchors to milestones M1, M2, M3, M4, M5, M7
+     - Replace YAML anchors with code examples in M2 and M4
+     - Make M7 anchor specific instead of "entire repository"
+
+  2. **MEDIUM PRIORITY** (50 minutes):
+     - Add explicit drift policies to 4 complex tasks (m2-004, m3-004, m4-004, m7-008)
+     - Clarify file scope boundaries in 3 multi-file tasks
+
+  **If improvements made:** Development confidence HIGH, timeline 14-21 days
+  **If proceeding as-is:** Development confidence MEDIUM-HIGH, potential +1-2 days drift
+
+  **Bottom Line:** The plan is fundamentally sound and development-ready. The recommended
+  improvements will reduce drift risk and provide better implementation guidance, but
+  they are not blocking. You can confidently begin development now or spend 2-3 hours
+  on improvements for even smoother execution.
