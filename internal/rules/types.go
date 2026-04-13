@@ -1,0 +1,42 @@
+package rules
+
+import "fmt"
+
+// RuleFile represents a rule file (.agent-instruction/rules/*.json)
+type RuleFile struct {
+	Title        string        `json:"title"`
+	Instructions []Instruction `json:"instructions"`
+	Imports      []string      `json:"imports,omitempty"`
+}
+
+// Instruction represents a single instruction rule
+type Instruction struct {
+	Heading    string      `json:"heading,omitempty"`
+	Rule       string      `json:"rule"`
+	References []Reference `json:"references,omitempty"`
+}
+
+// Reference represents a reference to another file or section
+type Reference struct {
+	Title string `json:"title"`
+	Path  string `json:"path"`
+}
+
+// Validate checks rule file for required fields
+func (r *RuleFile) Validate() error {
+	if r.Title == "" {
+		return fmt.Errorf("title is required")
+	}
+
+	if len(r.Instructions) == 0 {
+		return fmt.Errorf("must contain at least one instruction")
+	}
+
+	for i, instr := range r.Instructions {
+		if instr.Rule == "" {
+			return fmt.Errorf("instruction %d: rule text is required", i)
+		}
+	}
+
+	return nil
+}
