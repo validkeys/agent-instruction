@@ -98,6 +98,8 @@ milestones:
 
   - id: m5
     name: Add & List Commands
+    status: completed
+    completed_date: "2026-04-13"
     description: |
       Implement add command for quick rule addition and list command for displaying
       available rules with formatted output.
