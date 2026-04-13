@@ -1,0 +1,9 @@
+{
+  "title": "Cycle B",
+  "imports": ["./cycle-a.json"],
+  "instructions": [
+    {
+      "rule": "Rule from cycle-b"
+    }
+  ]
+}

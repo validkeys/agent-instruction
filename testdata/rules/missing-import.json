@@ -1,0 +1,9 @@
+{
+  "title": "Missing Import",
+  "imports": ["./nonexistent.json"],
+  "instructions": [
+    {
+      "rule": "This file imports a missing file"
+    }
+  ]
+}
