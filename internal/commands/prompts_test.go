@@ -228,15 +228,15 @@ func TestPromptPackages(t *testing.T) {
 
 func TestPromptYesNoDisplaysCorrectDefault(t *testing.T) {
 	tests := map[string]struct {
-		defaultYes  bool
+		defaultYes   bool
 		wantInOutput string
 	}{
 		"shows Y/n for default yes": {
-			defaultYes:  true,
+			defaultYes:   true,
 			wantInOutput: "Y/n",
 		},
 		"shows y/N for default no": {
-			defaultYes:  false,
+			defaultYes:   false,
 			wantInOutput: "y/N",
 		},
 	}

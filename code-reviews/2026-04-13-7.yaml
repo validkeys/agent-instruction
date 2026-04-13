@@ -1,0 +1,182 @@
+review_date: "2026-04-13"
+review_number: 7
+reviewer: golang-design-patterns
+files_reviewed:
+  - internal/commands/build.go
+  - internal/commands/build_test.go
+milestone: m4-004
+task: Implement build command
+
+summary: |
+  Build command implementation is production-ready with proper Cobra patterns,
+  good test coverage, and clean error handling. Two medium-priority issues:
+  using context.Background() instead of cmd.Context(), and inaccurate error
+  counting in parallel mode.
+
+findings:
+  - severity: medium
+    category: cancellation
+    location: build.go:181
+    title: Should use cmd.Context() not context.Background()
+    description: |
+      Creates new context.Background() instead of using cmd.Context().
+      This prevents parent context cancellation from propagating, so
+      Ctrl+C won't stop the build operation.
+    recommendation: |
+      Use Cobra's context which respects signal handling:
+
+      ctx := cmd.Context()
+
+      Cobra automatically sets up context with signal handling.
+    impact: User cannot cancel long-running builds
+    code_example: |
+      // Good - respects cancellation
+      ctx := cmd.Context()
+      if err := builder.ProcessPackagesParallel(ctx, packages, processPackage); err != nil {
+          // Will properly handle context.Canceled
+      }
+
+  - severity: medium
+    category: correctness
+    location: build.go:195-201
+    title: Inaccurate error counting in parallel mode
+    description: |
+      Assumes all packages before error succeeded, but errgroup stops
+      on first error while other goroutines may still be running or
+      not started. The success/error counts are misleading.
+    recommendation: |
+      Option 1: Track counts with atomics in processPackage:
+
+      var successCount, errorCount atomic.Int32
+      processPackage := func(ctx context.Context, pkgPath string) error {
+          err := /* ... */
+          if err != nil {
+              errorCount.Add(1)
+              return err
+          }
+          successCount.Add(1)
+          return nil
+      }
+
+      Option 2: Accept imprecise counts and document:
+      "⚠ Build failed after processing some packages"
+
+      Option 3: Don't claim specific counts in error case
+    impact: Misleading output to users about what failed
+
+  - severity: low
+    category: error_messages
+    location: build.go:168
+    title: Error messages lack full path context
+    description: |
+      When writing fails, error message uses just filename instead of
+      full or relative path, making it harder to debug.
+    recommendation: |
+      Use relative path for cleaner output:
+
+      relPath, _ := filepath.Rel(baseDir, outputPath)
+      if err := os.WriteFile(outputPath, []byte(finalContent), 0644); err != nil {
+          return fmt.Errorf("write %s: %w", relPath, err)
+      }
+    impact: Slightly harder to debug failures
+
+  - severity: low
+    category: error_handling
+    location: build.go:161
+    title: Silent error ignore on ParseManagedContent
+    description: |
+      Ignores error from ParseManagedContent with blank identifier.
+      If existing file is malformed, could silently lose user content.
+    recommendation: |
+      Handle parsing errors explicitly:
+
+      if existingData, err := os.ReadFile(outputPath); err == nil {
+          existingContent, err = files.ParseManagedContent(string(existingData))
+          if err != nil {
+              return fmt.Errorf("parse existing file %s: %w", outputPath, err)
+          }
+      }
+    impact: Could cause data loss if existing file is malformed
+
+  - severity: low
+    category: robustness
+    location: build.go:168
+    title: No directory creation before WriteFile
+    description: |
+      os.WriteFile will fail if output directory doesn't exist. While
+      packages typically exist, edge cases could fail.
+    recommendation: |
+      Ensure directory exists:
+
+      outputDir := filepath.Dir(outputPath)
+      if err := os.MkdirAll(outputDir, 0755); err != nil {
+          return fmt.Errorf("create directory: %w", err)
+      }
+    impact: Edge case failures in unusual directory structures
+
+  - severity: low
+    category: code_quality
+    location: build_test.go:201-259
+    title: Test helper duplication
+    description: |
+      Test file defines helpers that duplicate functionality from
+      testhelpers.go. Should reuse existing helpers.
+    recommendation: |
+      Use or extend existing test helpers instead of redefining.
+      If custom setup is needed, compose existing helpers.
+    impact: Code maintenance burden
+
+strengths:
+  - Proper Cobra patterns (RunE, cmd.OutOrStdout(), NoArgs)
+  - Context passed to parallel processing
+  - Consistent error wrapping with %w
+  - Table-driven tests with comprehensive coverage
+  - Good test helpers with t.Helper() and t.TempDir()
+  - Early returns for error cases
+  - Excellent UX with dry-run, verbose, and progress messages
+  - Clean command structure and flag handling
+  - Performance tracking with time.Since()
+  - Both parallel and sequential modes supported
+
+cobra_patterns:
+  correct:
+    - Uses RunE for proper error handling
+    - Uses cmd.OutOrStdout() for testable output
+    - Args: cobra.NoArgs validation
+    - Flag definition in init-style function
+    - Clear help text and examples
+  needs_improvement:
+    - Should use cmd.Context() not context.Background()
+
+test_coverage:
+  - Builds all packages successfully
+  - Handles single package
+  - Returns error when not initialized
+  - Dry-run mode prevents file creation
+  - Verbose mode shows progress
+  - Multiple frameworks support
+  - Empty monorepo handling
+  - Preserves existing user content
+
+recommendations:
+  priority_high: []
+  priority_medium:
+    - Use cmd.Context() instead of context.Background()
+    - Fix or clarify error counting in parallel mode
+  priority_low:
+    - Add full path context to error messages
+    - Handle ParseManagedContent errors explicitly
+    - Ensure output directory exists before writing
+    - Reduce test helper duplication
+
+verdict: production_ready
+notes: |
+  Implementation follows Cobra best practices and has excellent test coverage.
+  The two medium-priority issues (context usage and error counting) should be
+  addressed but don't block deployment.
+
+  The command provides good UX with dry-run mode, verbose output, and clear
+  progress indication. Parallel processing is properly integrated.
+
+  Test quality is high with comprehensive scenarios including edge cases like
+  preserving existing user content and handling empty monorepos.

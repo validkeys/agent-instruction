@@ -34,6 +34,7 @@ entire project.`,
 
 	// Register subcommands
 	rootCmd.AddCommand(newInitCmd())
+	rootCmd.AddCommand(newBuildCmd())
 
 	return rootCmd
 }
