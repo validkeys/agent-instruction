@@ -3,7 +3,6 @@ package builder
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/validkeys/agent-instruction/internal/config"
@@ -480,15 +479,4 @@ func createPackage(t *testing.T, baseDir, pkgPath string) {
 	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
 		t.Fatalf("write agent-instruction.json for %s: %v", pkgPath, err)
 	}
-}
-
-// containsPath checks if a slice contains a path (with normalized separators)
-func containsPath(paths []string, target string) bool {
-	normalizedTarget := filepath.ToSlash(target)
-	for _, p := range paths {
-		if filepath.ToSlash(p) == normalizedTarget || strings.HasSuffix(filepath.ToSlash(p), normalizedTarget) {
-			return true
-		}
-	}
-	return false
 }

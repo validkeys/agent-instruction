@@ -257,6 +257,14 @@ func TestResolveImports(t *testing.T) {
 				}
 			},
 		},
+		"load file error": {
+			setup: func(mock *mockConfigService, dir string) string {
+				// Don't add the file to mock - will cause LoadRuleFile error
+				return filepath.Join(dir, "missing.json")
+			},
+			wantErr: true,
+			errMsg:  "load rule file",
+		},
 	}
 
 	for name, tc := range tests {

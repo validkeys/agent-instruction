@@ -73,6 +73,23 @@ func TestDefaultConfigService_LoadConfig(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		"returns error with read permission failure": {
+			setup: func(t *testing.T) string {
+				t.Helper()
+				dir := t.TempDir()
+				path := filepath.Join(dir, "config.json")
+				cfg := &Config{
+					Version:    "1.0",
+					Frameworks: []string{"claude"},
+				}
+				data, _ := json.MarshalIndent(cfg, "", "  ")
+				if err := os.WriteFile(path, data, 0000); err != nil {
+					t.Fatalf("setup failed: %v", err)
+				}
+				return path
+			},
+			wantErr: true,
+		},
 	}
 
 	svc := NewConfigService()
@@ -256,6 +273,14 @@ func TestDefaultConfigService_LoadRuleFile(t *testing.T) {
 					t.Fatalf("setup failed: %v", err)
 				}
 				return path
+			},
+			wantErr: true,
+		},
+		"returns error for nonexistent file": {
+			setup: func(t *testing.T) string {
+				t.Helper()
+				dir := t.TempDir()
+				return filepath.Join(dir, "nonexistent.json")
 			},
 			wantErr: true,
 		},

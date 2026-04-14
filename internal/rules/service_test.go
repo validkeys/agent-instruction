@@ -262,7 +262,7 @@ type mockConfigServiceForSave struct {
 }
 
 func (m *mockConfigServiceForSave) LoadRuleFile(path string) (*RuleFile, error) {
-	return nil, nil
+	return nil, os.ErrNotExist
 }
 
 func (m *mockConfigServiceForSave) SaveRuleFile(path string, rule *RuleFile) error {
@@ -280,4 +280,216 @@ func (f *fullConfigService) LoadRuleFile(path string) (*RuleFile, error) {
 
 func (f *fullConfigService) SaveRuleFile(path string, rule *RuleFile) error {
 	return f.saveFunc(path, rule)
+}
+
+// Tests for FileConfigService
+
+func TestFileConfigService_LoadRuleFile(t *testing.T) {
+	tests := map[string]struct {
+		setup   func(t *testing.T) (string, string) // returns baseDir and filePath
+		wantErr bool
+		want    *RuleFile
+	}{
+		"loads rule with absolute path": {
+			setup: func(t *testing.T) (string, string) {
+				t.Helper()
+				dir := t.TempDir()
+				path := filepath.Join(dir, "rule.json")
+				rule := &RuleFile{
+					Title: "Absolute Path Test",
+					Instructions: []Instruction{
+						{Rule: "Test rule"},
+					},
+				}
+				writeTestRuleFile(t, path, rule)
+				return dir, path
+			},
+			wantErr: false,
+			want: &RuleFile{
+				Title: "Absolute Path Test",
+			},
+		},
+		"loads rule with relative path": {
+			setup: func(t *testing.T) (string, string) {
+				t.Helper()
+				dir := t.TempDir()
+				path := filepath.Join(dir, "rule.json")
+				rule := &RuleFile{
+					Title: "Relative Path Test",
+					Instructions: []Instruction{
+						{Rule: "Test rule"},
+					},
+				}
+				writeTestRuleFile(t, path, rule)
+				return dir, "rule.json"
+			},
+			wantErr: false,
+			want: &RuleFile{
+				Title: "Relative Path Test",
+			},
+		},
+		"returns error for nonexistent file": {
+			setup: func(t *testing.T) (string, string) {
+				t.Helper()
+				dir := t.TempDir()
+				return dir, "nonexistent.json"
+			},
+			wantErr: true,
+		},
+		"returns error for invalid JSON": {
+			setup: func(t *testing.T) (string, string) {
+				t.Helper()
+				dir := t.TempDir()
+				path := filepath.Join(dir, "invalid.json")
+				if err := os.WriteFile(path, []byte("not json"), 0644); err != nil {
+					t.Fatalf("setup failed: %v", err)
+				}
+				return dir, path
+			},
+			wantErr: true,
+		},
+		"returns error for invalid rule": {
+			setup: func(t *testing.T) (string, string) {
+				t.Helper()
+				dir := t.TempDir()
+				path := filepath.Join(dir, "invalid.json")
+				// Missing required title
+				rule := &RuleFile{}
+				data, _ := json.MarshalIndent(rule, "", "  ")
+				if err := os.WriteFile(path, data, 0644); err != nil {
+					t.Fatalf("setup failed: %v", err)
+				}
+				return dir, path
+			},
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			baseDir, filePath := tc.setup(t)
+
+			svc := NewFileConfigService(baseDir)
+			got, err := svc.LoadRuleFile(filePath)
+
+			if tc.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if !tc.wantErr {
+				if got.Title != tc.want.Title {
+					t.Errorf("Title: got %q, want %q", got.Title, tc.want.Title)
+				}
+			}
+		})
+	}
+}
+
+func TestFileConfigService_SaveRuleFile(t *testing.T) {
+	tests := map[string]struct {
+		baseDir  func(t *testing.T) string
+		filePath string
+		rule     *RuleFile
+		wantErr  bool
+	}{
+		"saves rule with absolute path": {
+			baseDir: func(t *testing.T) string {
+				return t.TempDir()
+			},
+			filePath: "", // Will be set in test
+			rule: &RuleFile{
+				Title: "Absolute Path Save",
+				Instructions: []Instruction{
+					{Rule: "Test rule"},
+				},
+			},
+			wantErr: false,
+		},
+		"saves rule with relative path": {
+			baseDir: func(t *testing.T) string {
+				return t.TempDir()
+			},
+			filePath: "output.json",
+			rule: &RuleFile{
+				Title: "Relative Path Save",
+				Instructions: []Instruction{
+					{Rule: "Test rule"},
+				},
+			},
+			wantErr: false,
+		},
+		"returns error for invalid rule": {
+			baseDir: func(t *testing.T) string {
+				return t.TempDir()
+			},
+			filePath: "invalid.json",
+			rule:     &RuleFile{}, // Missing required title
+			wantErr:  true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			baseDir := tc.baseDir(t)
+			svc := NewFileConfigService(baseDir)
+
+			filePath := tc.filePath
+			if filePath == "" {
+				filePath = filepath.Join(baseDir, "output.json")
+			}
+
+			err := svc.SaveRuleFile(filePath, tc.rule)
+
+			if tc.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if !tc.wantErr {
+				// Verify file was written
+				fullPath := filePath
+				if !filepath.IsAbs(filePath) {
+					fullPath = filepath.Join(baseDir, filePath)
+				}
+
+				data, err := os.ReadFile(fullPath)
+				if err != nil {
+					t.Fatalf("failed to read saved file: %v", err)
+				}
+
+				var loaded RuleFile
+				if err := json.Unmarshal(data, &loaded); err != nil {
+					t.Fatalf("failed to parse saved file: %v", err)
+				}
+
+				if loaded.Title != tc.rule.Title {
+					t.Errorf("Title: got %q, want %q", loaded.Title, tc.rule.Title)
+				}
+			}
+		})
+	}
+}
+
+func TestRuleService_AddInstruction_ErrorPath(t *testing.T) {
+	// Test the error path when LoadRuleFile fails
+	configSvc := &fullConfigService{
+		loadFunc: func(p string) (*RuleFile, error) {
+			return nil, os.ErrNotExist
+		},
+		saveFunc: func(p string, r *RuleFile) error {
+			return nil
+		},
+	}
+
+	service := NewRuleService(configSvc)
+
+	err := service.AddInstruction("nonexistent.json", Instruction{Rule: "Test"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
 }

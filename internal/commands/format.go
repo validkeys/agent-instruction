@@ -80,11 +80,7 @@ func IsColorSupported() bool {
 
 	// Check TERM environment variable
 	termEnv := os.Getenv("TERM")
-	if termEnv == "dumb" {
-		return false
-	}
-
-	return true
+	return termEnv != "dumb"
 }
 
 // Color codes

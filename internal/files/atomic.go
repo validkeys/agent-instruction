@@ -27,8 +27,8 @@ func WriteAtomic(path string, content []byte) error {
 
 	// Ensure cleanup on any error
 	defer func() {
-		tempFile.Close()
-		os.Remove(tempPath) // Clean up temp file (ignore error if already renamed)
+		_ = tempFile.Close()    // Ignore close error in cleanup
+		_ = os.Remove(tempPath) // Clean up temp file (ignore error if already renamed)
 	}()
 
 	// Write content to temp file

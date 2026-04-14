@@ -239,7 +239,7 @@ func TestEdgeCases_DeepNesting(t *testing.T) {
 	var prevPath string
 
 	for i := depth - 1; i >= 0; i-- {
-		path := filepath.Join(dir, filepath.Join("level", filepath.Base(filepath.Dir(prevPath)), filepath.Base(prevPath)))
+		var path string
 		if i == depth-1 {
 			path = filepath.Join(dir, "level-15.json")
 		} else {
@@ -457,19 +457,16 @@ func BenchmarkResolveImports_DeepNesting(b *testing.B) {
 	var prevPath string
 
 	for i := depth - 1; i >= 0; i-- {
-		path := filepath.Join(dir, filepath.Base(prevPath))
+		var path string
 		if i == depth-1 {
 			path = filepath.Join(dir, "level-20.json")
+		} else if prevPath == "" {
+			path = filepath.Join(dir, "level-0.json")
 		} else {
-			path = filepath.Join(dir, filepath.Base(filepath.Dir(prevPath))+"-"+filepath.Base(prevPath))
-			if prevPath == "" {
-				path = filepath.Join(dir, "level-0.json")
-			} else {
-				// Simpler naming
-				path = filepath.Join(dir, filepath.Base(prevPath)[:len(filepath.Base(prevPath))-5]+"-child.json")
-				if i == depth-2 {
-					path = filepath.Join(dir, "level-19.json")
-				}
+			// Simpler naming
+			path = filepath.Join(dir, filepath.Base(prevPath)[:len(filepath.Base(prevPath))-5]+"-child.json")
+			if i == depth-2 {
+				path = filepath.Join(dir, "level-19.json")
 			}
 		}
 

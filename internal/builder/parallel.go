@@ -45,7 +45,7 @@ func ProcessPackagesParallel(ctx context.Context, packages []string, processor f
 			}
 			defer sem.Release(1)
 
-			// Check if context was cancelled before processing
+			// Check if context was canceled before processing
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
@@ -60,9 +60,5 @@ func ProcessPackagesParallel(ctx context.Context, packages []string, processor f
 	}
 
 	// Wait for all goroutines and collect errors
-	if err := g.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return g.Wait()
 }
