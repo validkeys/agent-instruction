@@ -11,7 +11,7 @@ Before installing the skill, ensure you have:
    - Verify: `claude --version`
 
 2. **agent-instruction CLI** installed
-   - Install: `go install github.com/yourusername/agent-instruction@latest`
+   - Install: `go install github.com/validkeys/agent-instruction@latest`
    - Verify: `agent-instruction --version`
 
 3. **Git** (for cloning the repository)
@@ -21,7 +21,7 @@ Before installing the skill, ensure you have:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/agent-instruction.git
+git clone https://github.com/validkeys/agent-instruction.git
 cd agent-instruction
 
 # Run installation script
@@ -161,7 +161,7 @@ bash skill/install.sh
 
 1. Install the CLI:
    ```bash
-   go install github.com/yourusername/agent-instruction@latest
+   go install github.com/validkeys/agent-instruction@latest
    ```
 
 2. Ensure Go bin is in PATH:
@@ -281,10 +281,10 @@ If you encounter issues:
 
 1. Check the [Troubleshooting section](#troubleshooting) above
 2. Review the [README](README.md) for usage guidance
-3. Open an issue: https://github.com/yourusername/agent-instruction/issues
+3. Open an issue: https://github.com/validkeys/agent-instruction/issues
 
 ## Contributing
 
 Found a bug in the installation script? Contributions welcome!
 
-See: https://github.com/yourusername/agent-instruction/blob/main/CONTRIBUTING.md
+See: https://github.com/validkeys/agent-instruction/blob/main/CONTRIBUTING.md

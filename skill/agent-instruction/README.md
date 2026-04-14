@@ -1,6 +1,6 @@
 # agent-instruction Skill for Claude Code
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/yourusername/agent-instruction)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/validkeys/agent-instruction)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A Claude Code skill that enables natural language management of AI instruction files in monorepos during development sessions.
@@ -21,7 +21,7 @@ This skill bridges the gap between discovering best practices during development
 ### Prerequisites
 
 1. [Claude Code](https://claude.ai/code) installed
-2. [agent-instruction CLI](https://github.com/yourusername/agent-instruction) installed and in PATH
+2. [agent-instruction CLI](https://github.com/validkeys/agent-instruction) installed and in PATH
 
 ### Install the Skill
 
@@ -250,7 +250,7 @@ bash skill/install.sh
 which agent-instruction
 
 # Install CLI if missing
-go install github.com/yourusername/agent-instruction@latest
+go install github.com/validkeys/agent-instruction@latest
 ```
 
 ### Build Fails
@@ -275,7 +275,7 @@ ls -la ~/.local/share/claude/skills/
 
 ## Contributing
 
-Issues and pull requests welcome at [github.com/yourusername/agent-instruction](https://github.com/yourusername/agent-instruction).
+Issues and pull requests welcome at [github.com/validkeys/agent-instruction](https://github.com/validkeys/agent-instruction).
 
 ## License
 

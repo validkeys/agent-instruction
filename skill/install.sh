@@ -119,7 +119,7 @@ if [[ "$DRY_RUN" == false ]]; then
         print_success "agent-instruction CLI found: ${AGENT_VERSION}"
     else
         print_warning "agent-instruction CLI not found in PATH"
-        print_info "Install with: go install github.com/yourusername/agent-instruction@latest"
+        print_info "Install with: go install github.com/validkeys/agent-instruction@latest"
     fi
 fi
 

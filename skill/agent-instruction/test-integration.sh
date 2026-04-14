@@ -4,7 +4,6 @@ set -e
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
@@ -40,7 +39,7 @@ run_test() {
 
 # Create temporary test directory
 TEST_DIR=$(mktemp -d)
-trap "rm -rf ${TEST_DIR}" EXIT
+trap 'rm -rf ${TEST_DIR}' EXIT
 
 echo "Integration Tests for agent-instruction Skill"
 echo "=============================================="
@@ -53,7 +52,7 @@ if command -v agent-instruction &> /dev/null; then
     print_pass "CLI found: ${VERSION}"
 else
     print_fail "CLI not found in PATH"
-    print_info "Install with: go install github.com/yourusername/agent-instruction@latest"
+    print_info "Install with: go install github.com/validkeys/agent-instruction@latest"
     exit 1
 fi
 
@@ -72,8 +71,7 @@ fi
 
 # Test 2: Add a rule
 run_test "Add a test rule"
-OUTPUT=$(agent-instruction add "Test rule content" --title="Test Rule" --rule="testing" 2>&1)
-if [[ $? -eq 0 ]]; then
+if OUTPUT=$(agent-instruction add "Test rule content" --title="Test Rule" --rule="testing" 2>&1); then
     if [[ -f ".agent-instruction/rules/testing.json" ]]; then
         print_pass "Rule added successfully"
     else
@@ -87,8 +85,7 @@ fi
 
 # Test 3: List rules
 run_test "List rules"
-OUTPUT=$(agent-instruction list 2>&1)
-if [[ $? -eq 0 ]]; then
+if OUTPUT=$(agent-instruction list 2>&1); then
     if echo "${OUTPUT}" | grep -q "testing.json"; then
         print_pass "List shows expected rule file"
     else
@@ -102,8 +99,7 @@ fi
 
 # Test 4: List with verbose flag
 run_test "List rules with --verbose"
-OUTPUT=$(agent-instruction list --verbose 2>&1)
-if [[ $? -eq 0 ]]; then
+if OUTPUT=$(agent-instruction list --verbose 2>&1); then
     if echo "${OUTPUT}" | grep -q "Test Rule" && echo "${OUTPUT}" | grep -q "Test rule content"; then
         print_pass "Verbose list shows rule details"
     else
@@ -117,8 +113,7 @@ fi
 
 # Test 5: Build instruction files
 run_test "Build instruction files"
-OUTPUT=$(agent-instruction build 2>&1)
-if [[ $? -eq 0 ]]; then
+if OUTPUT=$(agent-instruction build 2>&1); then
     if [[ -f "CLAUDE.md" ]] && [[ -f "AGENTS.md" ]]; then
         print_pass "Build generated instruction files"
     else
@@ -185,8 +180,7 @@ fi
 
 # Test 10: Error handling - invalid rule file
 run_test "Handle invalid rule file gracefully"
-OUTPUT=$(agent-instruction add "Test" --rule="nonexistent-file-that-does-not-exist-yet" 2>&1)
-if [[ $? -eq 0 ]]; then
+if OUTPUT=$(agent-instruction add "Test" --rule="nonexistent-file-that-does-not-exist-yet" 2>&1); then
     # Command should either create the file or prompt user
     print_pass "Handled new rule file appropriately"
 else
