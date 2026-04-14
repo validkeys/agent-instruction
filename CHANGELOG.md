@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-04-14
+
+### Fixed
+
+- `build` command now uses atomic writes to prevent file corruption on interrupted writes
+- `init` command now uses atomic writes for config and rule files
+- `config.LoadConfig` now validates config on load, eliminating inconsistent caller-side validation
+- Sequential build mode (`--no-parallel`) now stops on first error, matching parallel mode behavior
+- Removed unimplemented `GenerateForPackage` stub from `BuildService` interface
+- Removed unused `ValidatePathSafe` alias in files package
+- Simplified sentinel error returns — removed redundant `fmt.Errorf("%w", sentinel)` wrapping
+
 ## [1.0.0] - 2026-04-14
 
 ### Added
