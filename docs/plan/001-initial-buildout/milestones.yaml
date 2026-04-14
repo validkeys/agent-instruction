@@ -53,6 +53,8 @@ milestones:
 
   - id: m2
     name: Rule Management & Import Resolution
+    status: completed
+    completed_date: "2026-04-13"
     description: |
       Create rule service with import resolution algorithm including cycle detection.
       Implements depth-first traversal with proper error handling for circular imports.
@@ -68,6 +70,8 @@ milestones:
 
   - id: m3
     name: Build Service & Init Command
+    status: completed
+    completed_date: "2026-04-13"
     description: |
       Implement markdown generation logic for CLAUDE.md/AGENTS.md files and create
       init command with interactive prompts for initial setup.
@@ -83,6 +87,8 @@ milestones:
 
   - id: m4
     name: Build Command Implementation
+    status: completed
+    completed_date: "2026-04-13"
     description: |
       Implement full build command with package discovery algorithm, import composition,
       and multi-package support for monorepos.
@@ -115,6 +121,8 @@ milestones:
 
   - id: m6
     name: Claude Code Skill
+    status: completed
+    completed_date: "2026-04-14"
     description: |
       Create Claude Code skill definition following the skill schema with proper
       triggers, command definitions, and best practices documentation.
@@ -130,6 +138,8 @@ milestones:
 
   - id: m7
     name: Testing, Documentation & Polish
+    status: completed
+    completed_date: "2026-04-14"
     description: |
       Add comprehensive test coverage, write README documentation, create usage examples,
       and set up CI/CD pipeline with GitHub Actions.
