@@ -1,0 +1,43 @@
+{
+  "title": "API Package Instructions",
+  "imports": [
+    "../../.agent-instruction/rules/testing.json",
+    "../../.agent-instruction/rules/security.json"
+  ],
+  "instructions": [
+    {
+      "heading": "API Architecture",
+      "rule": "Use Express.js with TypeScript. Implement middleware chain: logging, auth, validation, rate limiting, error handling. Keep route handlers thin - delegate to service layer."
+    },
+    {
+      "heading": "Route Organization",
+      "rule": "Group routes by resource in separate files. Use express.Router() for each resource. Mount routers in main app.ts. Follow RESTful conventions: GET/POST/PUT/DELETE."
+    },
+    {
+      "heading": "Request Validation",
+      "rule": "Validate request body, query params, and path params using Zod schemas. Return 400 with detailed validation errors. Never process invalid requests."
+    },
+    {
+      "heading": "Response Format",
+      "rule": "Use consistent response format: { success: boolean, data?: any, error?: string }. Return appropriate HTTP status codes. Include request ID in all responses for tracing."
+    },
+    {
+      "heading": "Rate Limiting",
+      "rule": "Implement rate limiting per endpoint and per user. Use Redis for distributed rate limiting. Return 429 with Retry-After header. Document rate limits in API docs."
+    },
+    {
+      "heading": "Database Access",
+      "rule": "Use Prisma ORM for database access. Never expose Prisma models directly in API responses. Use DTO pattern to transform data. Implement connection pooling."
+    },
+    {
+      "heading": "Error Handling",
+      "rule": "Implement centralized error handler middleware. Log all errors with context. Never expose internal errors to clients. Return sanitized error messages.",
+      "references": [
+        {
+          "title": "Error Handler",
+          "path": "src/middleware/errorHandler.ts"
+        }
+      ]
+    }
+  ]
+}

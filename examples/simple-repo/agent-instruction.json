@@ -1,0 +1,9 @@
+{
+  "title": "Project Instructions",
+  "instructions": [
+    {
+      "heading": "Project Context",
+      "rule": "This is a single-package Go application. All source code is in the root directory. Follow standard Go project conventions."
+    }
+  ]
+}

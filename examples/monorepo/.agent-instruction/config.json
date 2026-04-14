@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "frameworks": ["claude", "agents"],
+  "packages": [
+    "packages/api",
+    "packages/web",
+    "packages/shared"
+  ]
+}

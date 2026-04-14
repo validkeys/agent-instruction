@@ -350,6 +350,8 @@ tasks:
 
   - id: m7-006
     name: Create example configurations
+    status: completed
+    completed_date: 2026-04-14
     description: |
       Build realistic example configurations demonstrating common setups
       and patterns for different use cases.

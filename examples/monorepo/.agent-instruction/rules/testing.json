@@ -1,0 +1,25 @@
+{
+  "title": "Testing Standards",
+  "instructions": [
+    {
+      "heading": "Test Framework",
+      "rule": "Use Vitest for all tests. Configure with workspace-aware setup. Test files use .test.ts extension and live alongside implementation files."
+    },
+    {
+      "heading": "Test Organization",
+      "rule": "Use describe blocks to group related tests. Use test.each for parameterized tests. Keep test names descriptive using 'should' convention: 'should return error when input is invalid'."
+    },
+    {
+      "heading": "Test Coverage",
+      "rule": "Maintain minimum 80% code coverage. Run coverage checks in CI. Focus on edge cases and error paths. Don't write tests just to hit coverage metrics."
+    },
+    {
+      "heading": "Mocking Strategy",
+      "rule": "Mock external dependencies and I/O. Never mock internal functions. Use vi.mock() for module mocks. Prefer dependency injection over mocking when possible."
+    },
+    {
+      "heading": "Integration Tests",
+      "rule": "Write integration tests for API endpoints. Use supertest for HTTP testing. Test happy path, auth errors, validation errors, and rate limiting."
+    }
+  ]
+}

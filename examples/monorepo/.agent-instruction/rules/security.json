@@ -1,0 +1,29 @@
+{
+  "title": "Security Requirements",
+  "instructions": [
+    {
+      "heading": "Input Validation",
+      "rule": "Validate and sanitize all user input. Use Zod schemas for runtime validation. Never trust client-side validation alone. Validate on both client and server."
+    },
+    {
+      "heading": "Authentication",
+      "rule": "Use JWT tokens with short expiration (15 min access, 7 day refresh). Store tokens in httpOnly cookies. Implement refresh token rotation. Never store sensitive data in JWT payload."
+    },
+    {
+      "heading": "Authorization",
+      "rule": "Check permissions on every protected route. Use role-based access control (RBAC). Implement least privilege principle. Log all authorization failures for audit."
+    },
+    {
+      "heading": "Secrets Management",
+      "rule": "Never commit secrets to git. Use environment variables for all secrets. Use different secrets per environment. Rotate secrets regularly. Document all required env vars in .env.example."
+    },
+    {
+      "heading": "SQL Injection Prevention",
+      "rule": "Always use parameterized queries. Never concatenate user input into SQL strings. Use ORM query builders when possible. Validate all inputs even when using ORMs."
+    },
+    {
+      "heading": "XSS Prevention",
+      "rule": "Sanitize all user-generated content before rendering. Use React's default escaping. Never use dangerouslySetInnerHTML without sanitization. Set Content-Security-Policy headers."
+    }
+  ]
+}

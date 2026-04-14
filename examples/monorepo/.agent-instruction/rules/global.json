@@ -1,0 +1,31 @@
+{
+  "title": "Global Development Standards",
+  "instructions": [
+    {
+      "heading": "Repository Structure",
+      "rule": "This is a monorepo managed with npm workspaces. All packages live in packages/* directory. Shared code belongs in packages/shared. Never duplicate code between packages."
+    },
+    {
+      "heading": "TypeScript Standards",
+      "rule": "Use strict TypeScript mode. Enable all strict flags in tsconfig.json. Prefer type over interface for composability. Use explicit return types on all exported functions.",
+      "references": [
+        {
+          "title": "TypeScript Configuration",
+          "path": "tsconfig.base.json"
+        }
+      ]
+    },
+    {
+      "heading": "Code Organization",
+      "rule": "Follow feature-based folder structure. Group related files by feature, not by type. Keep index.ts files minimal - use them only for public API exports."
+    },
+    {
+      "heading": "Import Standards",
+      "rule": "Use absolute imports via path aliases. Never use relative imports that go up more than one level (../..). Import order: external deps, internal packages, local files."
+    },
+    {
+      "heading": "Error Handling",
+      "rule": "Use custom error classes extending Error. Include error codes and context. Never throw strings. Always type catch blocks as unknown and validate error shape."
+    }
+  ]
+}
