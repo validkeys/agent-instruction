@@ -1,0 +1,150 @@
+# golangci-lint configuration
+# Reference: https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    # Default linters
+    - errcheck      # Check for unchecked errors
+    - gosimple      # Simplify code
+    - govet         # Vet examines Go source code and reports suspicious constructs
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Advanced static analysis
+    - unused        # Check for unused constants, variables, functions and types
+
+    # Additional recommended linters
+    - gofmt         # Check if code is gofmt-ed
+    - goimports     # Check if imports are formatted correctly
+    - revive        # Fast, configurable, extensible, flexible, and beautiful linter for Go
+    - misspell      # Finds commonly misspelled English words in comments
+    - unconvert     # Remove unnecessary type conversions
+    - unparam       # Reports unused function parameters
+    - gosec         # Security-oriented linter
+    - bodyclose     # Checks whether HTTP response body is closed successfully
+    - errname       # Checks that sentinel errors are prefixed with Err
+    - errorlint     # Find code that will cause problems with error wrapping
+    - gocyclo       # Computes and checks the cyclomatic complexity of functions
+    - dupl          # Tool for code clone detection
+    - goconst       # Finds repeated strings that could be replaced by a constant
+    - gocognit      # Computes and checks the cognitive complexity of functions
+    - nilnil        # Checks that there is no simultaneous return of nil error and nil value
+
+  disable:
+    - typecheck     # Disabled because we rely on go build for type checking
+
+linters-settings:
+  errcheck:
+    check-type-assertions: false
+    check-blank: false
+    exclude-functions:
+      - (*os.File).Close
+      - (*strings.Builder).WriteString
+      - (*strings.Builder).WriteByte
+      - fmt.Fprintf   # CLI output errors are not critical
+      - fmt.Fprintln  # CLI output errors are not critical
+      - fmt.Fprint    # CLI output errors are not critical
+
+  govet:
+    enable-all: true
+    disable:
+      - shadow        # Too strict for practical use
+      - fieldalignment # Premature optimization
+
+  staticcheck:
+    checks: ["all"]
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+        disabled: true  # Too strict for internal packages
+      - name: if-return
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: package-comments
+        disabled: true  # Not required for all packages
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: var-declaration
+      - name: var-naming
+
+  gocyclo:
+    min-complexity: 15
+
+  gocognit:
+    min-complexity: 20
+
+  dupl:
+    threshold: 100
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+    ignore-tests: true
+
+  misspell:
+    locale: US
+
+  gosec:
+    excludes:
+      - G304  # File path provided as taint input - we handle this carefully
+      - G301  # Directory permissions 0755 are appropriate for config directories
+      - G306  # File permissions 0644 are standard for config files
+
+  unused:
+    check-exported: false
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - dupl
+        - errcheck
+        - goconst
+        - gocyclo
+        - gocognit
+        - gosec
+
+    # Exclude specific issues in test helpers
+    - path: testhelpers\.go
+      linters:
+        - errcheck
+        - unused
+
+    # Allow t.Helper() without checking return value
+    - source: "t\\.Helper\\(\\)"
+      linters:
+        - errcheck
+
+    # Allow high complexity in main command functions (will refactor in future)
+    - path: internal/commands/(build|init|list)\.go
+      linters:
+        - gocognit
+        - gocyclo
+
+  # Show all issues, even from generated files
+  exclude:
+    - "^SA1019:"  # Allow use of deprecated functions when needed
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  sort-results: true
