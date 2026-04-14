@@ -35,11 +35,11 @@ type Reference struct {
 // Validate checks rule file for required fields
 func (r *RuleFile) Validate() error {
 	if r.Title == "" {
-		return fmt.Errorf("%w", ErrTitleRequired)
+		return ErrTitleRequired
 	}
 
 	if len(r.Instructions) == 0 {
-		return fmt.Errorf("%w", ErrInstructionsRequired)
+		return ErrInstructionsRequired
 	}
 
 	for i, instr := range r.Instructions {

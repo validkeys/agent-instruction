@@ -13,9 +13,6 @@ import (
 type BuildService interface {
 	// BuildFile resolves imports, generates markdown, and writes output atomically
 	BuildFile(rulePath, outputPath string) error
-
-	// GenerateForPackage generates instruction files for a package directory
-	GenerateForPackage(packagePath string) error
 }
 
 // DefaultBuildService implements BuildService using rule and file services
@@ -91,8 +88,3 @@ func (s *DefaultBuildService) BuildFile(rulePath, outputPath string) error {
 	return nil
 }
 
-// GenerateForPackage generates instruction files for a package directory
-// This is a placeholder for M4 implementation
-func (s *DefaultBuildService) GenerateForPackage(packagePath string) error {
-	return fmt.Errorf("GenerateForPackage not yet implemented")
-}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/validkeys/agent-instruction/internal/files"
 )
 
 // RuleConfigService defines operations for loading and saving rule files
@@ -127,7 +129,7 @@ func (s *FileConfigService) SaveRuleFile(path string, rule *RuleFile) error {
 		return fmt.Errorf("marshal JSON: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := files.WriteAtomic(path, data); err != nil {
 		return fmt.Errorf("write file %s: %w", path, err)
 	}
 

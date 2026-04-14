@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/validkeys/agent-instruction/internal/config"
+	"github.com/validkeys/agent-instruction/internal/files"
 	"github.com/validkeys/agent-instruction/internal/rules"
 )
 
@@ -214,7 +215,7 @@ func saveConfig(path string, cfg *config.Config) error {
 	// Add newline at end
 	data = append(data, '\n')
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := files.WriteAtomic(path, data); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}
 
@@ -236,7 +237,7 @@ func saveRuleFile(path string, rule *rules.RuleFile) error {
 	// Add newline at end
 	data = append(data, '\n')
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := files.WriteAtomic(path, data); err != nil {
 		return fmt.Errorf("write rule file: %w", err)
 	}
 

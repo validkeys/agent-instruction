@@ -24,11 +24,11 @@ type Config struct {
 // Validate checks config for required fields and valid values
 func (c *Config) Validate() error {
 	if c.Version == "" {
-		return fmt.Errorf("%w", ErrVersionRequired)
+		return ErrVersionRequired
 	}
 
 	if len(c.Frameworks) == 0 {
-		return fmt.Errorf("%w", ErrFrameworkRequired)
+		return ErrFrameworkRequired
 	}
 
 	validFrameworks := map[string]bool{
@@ -55,6 +55,10 @@ func LoadConfig(path string) (*Config, error) {
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parse config JSON: %w", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
 	return &cfg, nil

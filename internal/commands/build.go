@@ -41,7 +41,7 @@ and generates instruction files for each configured framework.`,
 
 	cmd.Flags().Bool("dry-run", false, "preview changes without writing files")
 	cmd.Flags().Bool("verbose", false, "show detailed progress output")
-	cmd.Flags().Bool("no-parallel", false, "disable parallel package processing")
+	cmd.Flags().Bool("no-parallel", false, "disable parallel package processing (stops on first error)")
 
 	return cmd
 }
@@ -73,11 +73,6 @@ func runBuild(cmd *cobra.Command, args []string) error {
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
-	}
-
-	// Validate config
-	if err := cfg.Validate(); err != nil {
-		return fmt.Errorf("invalid config: %w", err)
 	}
 
 	// Discover packages
@@ -172,9 +167,9 @@ func runBuild(cmd *cobra.Command, args []string) error {
 			}
 
 			// Write to file
-			relPath, _ := filepath.Rel(baseDir, outputPath)
-			if err := os.WriteFile(outputPath, []byte(finalContent), 0644); err != nil {
-				return fmt.Errorf("write %s: %w", relPath, err)
+			outputRelPath, _ := filepath.Rel(baseDir, outputPath)
+			if err := files.WriteAtomic(outputPath, []byte(finalContent)); err != nil {
+				return fmt.Errorf("write %s: %w", outputRelPath, err)
 			}
 
 			if verbose {
@@ -190,11 +185,12 @@ func runBuild(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	if noParallel || len(packages) == 1 {
-		// Sequential processing
+		// Sequential processing — stop on first error (same contract as parallel)
 		for _, pkg := range packages {
 			if err := processPackage(ctx, pkg); err != nil {
-				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				errorCount.Add(1)
+				fmt.Fprintf(cmd.OutOrStderr(), "Build failed: %v\n", err)
+				break
 			}
 		}
 	} else {

@@ -400,44 +400,6 @@ func TestBuildFile(t *testing.T) {
 	}
 }
 
-// TestGenerateForPackage tests the GenerateForPackage method (placeholder)
-func TestGenerateForPackage(t *testing.T) {
-	tests := map[string]struct {
-		packagePath string
-		wantErr     bool
-		errMsg      string
-	}{
-		"returns not implemented error": {
-			packagePath: "/some/package",
-			wantErr:     true,
-			errMsg:      "not yet implemented",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			configService := config.NewConfigService()
-			ruleService := rules.NewRuleService(configService)
-			fileService := files.NewFileService()
-			buildService := NewBuildService(ruleService, fileService)
-
-			err := buildService.GenerateForPackage(tc.packagePath)
-
-			if tc.wantErr && err == nil {
-				t.Fatal("expected error, got nil")
-			}
-			if !tc.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if tc.wantErr && tc.errMsg != "" {
-				if !strings.Contains(err.Error(), tc.errMsg) {
-					t.Errorf("error %q does not contain %q", err.Error(), tc.errMsg)
-				}
-			}
-		})
-	}
-}
-
 // TestNewBuildService tests the constructor
 func TestNewBuildService(t *testing.T) {
 	configService := config.NewConfigService()

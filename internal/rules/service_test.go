@@ -8,240 +8,312 @@ import (
 )
 
 func TestRuleService_ResolveRules(t *testing.T) {
-	dir := t.TempDir()
-
-	// Create test rule files
-	shared := &RuleFile{
-		Title: "Shared",
-		Instructions: []Instruction{
-			{Rule: "Shared rule"},
+	tests := map[string]struct {
+		setup       func(t *testing.T) (string, *configServiceWrapper)
+		wantErr     bool
+		wantCount   int
+		wantRules   []string
+	}{
+		"resolves imports and returns merged instructions": {
+			setup: func(t *testing.T) (string, *configServiceWrapper) {
+				t.Helper()
+				dir := t.TempDir()
+				shared := &RuleFile{
+					Title:        "Shared",
+					Instructions: []Instruction{{Rule: "Shared rule"}},
+				}
+				writeTestRuleFile(t, filepath.Join(dir, "shared.json"), shared)
+				main := &RuleFile{
+					Title:        "Main",
+					Imports:      []string{"./shared.json"},
+					Instructions: []Instruction{{Rule: "Main rule"}},
+				}
+				mainPath := filepath.Join(dir, "main.json")
+				writeTestRuleFile(t, mainPath, main)
+				svc := &configServiceWrapper{
+					loadFunc: func(path string) (*RuleFile, error) {
+						data, err := os.ReadFile(path)
+						if err != nil {
+							return nil, err
+						}
+						var rule RuleFile
+						if err := json.Unmarshal(data, &rule); err != nil {
+							return nil, err
+						}
+						return &rule, nil
+					},
+				}
+				return mainPath, svc
+			},
+			wantErr:   false,
+			wantCount: 2,
+			wantRules: []string{"Shared rule", "Main rule"},
+		},
+		"returns error when rule file does not exist": {
+			setup: func(t *testing.T) (string, *configServiceWrapper) {
+				t.Helper()
+				svc := &configServiceWrapper{
+					loadFunc: func(path string) (*RuleFile, error) {
+						return nil, os.ErrNotExist
+					},
+				}
+				return "/nonexistent/rule.json", svc
+			},
+			wantErr: true,
 		},
 	}
-	sharedPath := filepath.Join(dir, "shared.json")
-	writeTestRuleFile(t, sharedPath, shared)
 
-	main := &RuleFile{
-		Title:   "Main",
-		Imports: []string{"./shared.json"},
-		Instructions: []Instruction{
-			{Rule: "Main rule"},
-		},
-	}
-	mainPath := filepath.Join(dir, "main.json")
-	writeTestRuleFile(t, mainPath, main)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			rootPath, svc := tc.setup(t)
+			service := NewRuleService(svc)
 
-	// Create service with real file config service
-	configSvc := &configServiceWrapper{
-		loadFunc: func(path string) (*RuleFile, error) {
-			data, err := os.ReadFile(path)
-			if err != nil {
-				return nil, err
+			instructions, err := service.ResolveRules(rootPath)
+
+			if tc.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
 			}
-			var rule RuleFile
-			if err := json.Unmarshal(data, &rule); err != nil {
-				return nil, err
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
-			return &rule, nil
-		},
-	}
-
-	service := NewRuleService(configSvc)
-
-	instructions, err := service.ResolveRules(mainPath)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if len(instructions) != 2 {
-		t.Fatalf("expected 2 instructions, got %d", len(instructions))
-	}
-
-	if instructions[0].Rule != "Shared rule" {
-		t.Errorf("first instruction: got %q, want 'Shared rule'", instructions[0].Rule)
-	}
-
-	if instructions[1].Rule != "Main rule" {
-		t.Errorf("second instruction: got %q, want 'Main rule'", instructions[1].Rule)
+			if !tc.wantErr {
+				if len(instructions) != tc.wantCount {
+					t.Fatalf("instruction count: got %d, want %d", len(instructions), tc.wantCount)
+				}
+				for i, want := range tc.wantRules {
+					if instructions[i].Rule != want {
+						t.Errorf("instruction[%d]: got %q, want %q", i, instructions[i].Rule, want)
+					}
+				}
+			}
+		})
 	}
 }
 
 func TestRuleService_LoadRuleFile(t *testing.T) {
-	dir := t.TempDir()
-
-	rule := &RuleFile{
-		Title: "Test Rule",
-		Instructions: []Instruction{
-			{Rule: "Test instruction"},
+	tests := map[string]struct {
+		setup     func(t *testing.T) (string, *configServiceWrapper)
+		wantErr   bool
+		wantTitle string
+	}{
+		"loads rule file successfully": {
+			setup: func(t *testing.T) (string, *configServiceWrapper) {
+				t.Helper()
+				dir := t.TempDir()
+				rule := &RuleFile{
+					Title:        "Test Rule",
+					Instructions: []Instruction{{Rule: "Test instruction"}},
+				}
+				path := filepath.Join(dir, "test.json")
+				writeTestRuleFile(t, path, rule)
+				svc := &configServiceWrapper{
+					loadFunc: func(p string) (*RuleFile, error) {
+						data, err := os.ReadFile(p)
+						if err != nil {
+							return nil, err
+						}
+						var r RuleFile
+						if err := json.Unmarshal(data, &r); err != nil {
+							return nil, err
+						}
+						return &r, nil
+					},
+				}
+				return path, svc
+			},
+			wantErr:   false,
+			wantTitle: "Test Rule",
+		},
+		"returns error when file does not exist": {
+			setup: func(t *testing.T) (string, *configServiceWrapper) {
+				t.Helper()
+				svc := &configServiceWrapper{
+					loadFunc: func(p string) (*RuleFile, error) {
+						return nil, os.ErrNotExist
+					},
+				}
+				return "/nonexistent/rule.json", svc
+			},
+			wantErr: true,
 		},
 	}
-	path := filepath.Join(dir, "test.json")
-	writeTestRuleFile(t, path, rule)
 
-	configSvc := &configServiceWrapper{
-		loadFunc: func(p string) (*RuleFile, error) {
-			data, err := os.ReadFile(p)
-			if err != nil {
-				return nil, err
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			path, svc := tc.setup(t)
+			service := NewRuleService(svc)
+
+			loaded, err := service.LoadRuleFile(path)
+
+			if tc.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
 			}
-			var r RuleFile
-			if err := json.Unmarshal(data, &r); err != nil {
-				return nil, err
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
-			return &r, nil
-		},
-	}
-
-	service := NewRuleService(configSvc)
-
-	loaded, err := service.LoadRuleFile(path)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if loaded.Title != rule.Title {
-		t.Errorf("title: got %q, want %q", loaded.Title, rule.Title)
-	}
-
-	if len(loaded.Instructions) != len(rule.Instructions) {
-		t.Fatalf("instructions length: got %d, want %d", len(loaded.Instructions), len(rule.Instructions))
+			if !tc.wantErr && loaded.Title != tc.wantTitle {
+				t.Errorf("title: got %q, want %q", loaded.Title, tc.wantTitle)
+			}
+		})
 	}
 }
 
 func TestRuleService_SaveRuleFile(t *testing.T) {
-	dir := t.TempDir()
-
-	rule := &RuleFile{
-		Title: "Test Rule",
-		Instructions: []Instruction{
-			{Rule: "Test instruction"},
+	tests := map[string]struct {
+		rule    *RuleFile
+		wantErr bool
+	}{
+		"delegates save to config service and persists rule": {
+			rule: &RuleFile{
+				Title:        "Test Rule",
+				Instructions: []Instruction{{Rule: "Test instruction"}},
+			},
+			wantErr: false,
+		},
+		"returns error when config service save fails": {
+			rule: &RuleFile{
+				Title:        "Failing Rule",
+				Instructions: []Instruction{{Rule: "Test instruction"}},
+			},
+			wantErr: true,
 		},
 	}
-	path := filepath.Join(dir, "test.json")
 
-	// Track saves
-	saved := false
-	var savedRule *RuleFile
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "test.json")
+			saved := false
+			var savedRule *RuleFile
 
-	configSvc := &mockConfigServiceForSave{
-		saveFunc: func(p string, r *RuleFile) error {
-			saved = true
-			savedRule = r
-			// Actually write to disk for verification
-			data, err := json.MarshalIndent(r, "", "  ")
-			if err != nil {
-				return err
+			configSvc := &mockConfigServiceForSave{
+				saveFunc: func(p string, r *RuleFile) error {
+					if tc.wantErr {
+						return os.ErrPermission
+					}
+					saved = true
+					savedRule = r
+					data, err := json.MarshalIndent(r, "", "  ")
+					if err != nil {
+						return err
+					}
+					return os.WriteFile(p, data, 0644)
+				},
 			}
-			return os.WriteFile(p, data, 0644)
-		},
-	}
+			service := &DefaultRuleService{configService: configSvc}
 
-	service := &DefaultRuleService{
-		configService: configSvc,
-	}
+			err := service.SaveRuleFile(path, tc.rule)
 
-	err := service.SaveRuleFile(path, rule)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if !saved {
-		t.Error("SaveRuleFile was not called")
-	}
-
-	if savedRule == nil {
-		t.Fatal("savedRule is nil")
-	}
-
-	if savedRule.Title != rule.Title {
-		t.Errorf("saved title: got %q, want %q", savedRule.Title, rule.Title)
-	}
-
-	// Verify file was written
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("failed to read saved file: %v", err)
-	}
-
-	var loaded RuleFile
-	if err := json.Unmarshal(data, &loaded); err != nil {
-		t.Fatalf("failed to parse saved file: %v", err)
-	}
-
-	if loaded.Title != rule.Title {
-		t.Errorf("loaded title: got %q, want %q", loaded.Title, rule.Title)
+			if tc.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !tc.wantErr {
+				if !saved {
+					t.Error("save func was not called")
+				}
+				if savedRule == nil || savedRule.Title != tc.rule.Title {
+					t.Errorf("saved title: got %q, want %q", savedRule.Title, tc.rule.Title)
+				}
+				data, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatalf("read saved file: %v", err)
+				}
+				var loaded RuleFile
+				if err := json.Unmarshal(data, &loaded); err != nil {
+					t.Fatalf("parse saved file: %v", err)
+				}
+				if loaded.Title != tc.rule.Title {
+					t.Errorf("loaded title: got %q, want %q", loaded.Title, tc.rule.Title)
+				}
+			}
+		})
 	}
 }
 
 func TestRuleService_AddInstruction(t *testing.T) {
-	dir := t.TempDir()
-
-	// Create initial rule file
-	rule := &RuleFile{
-		Title: "Test Rule",
-		Instructions: []Instruction{
-			{Rule: "Existing instruction"},
+	tests := map[string]struct {
+		existing    *RuleFile
+		instruction Instruction
+		wantErr     bool
+		wantRules   []string
+	}{
+		"appends instruction to existing rule file": {
+			existing: &RuleFile{
+				Title:        "Test Rule",
+				Instructions: []Instruction{{Rule: "Existing instruction"}},
+			},
+			instruction: Instruction{Heading: "New Section", Rule: "New instruction"},
+			wantErr:     false,
+			wantRules:   []string{"Existing instruction", "New instruction"},
 		},
-	}
-	path := filepath.Join(dir, "test.json")
-	writeTestRuleFile(t, path, rule)
-
-	// Create service
-	configSvc := &fullConfigService{
-		loadFunc: func(p string) (*RuleFile, error) {
-			data, err := os.ReadFile(p)
-			if err != nil {
-				return nil, err
-			}
-			var r RuleFile
-			if err := json.Unmarshal(data, &r); err != nil {
-				return nil, err
-			}
-			return &r, nil
-		},
-		saveFunc: func(p string, r *RuleFile) error {
-			data, err := json.MarshalIndent(r, "", "  ")
-			if err != nil {
-				return err
-			}
-			return os.WriteFile(p, data, 0644)
+		"returns error when rule file does not exist": {
+			existing:    nil, // file will not be created
+			instruction: Instruction{Rule: "New instruction"},
+			wantErr:     true,
 		},
 	}
 
-	service := &DefaultRuleService{
-		configService: configSvc,
-	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "test.json")
 
-	newInstruction := Instruction{
-		Heading: "New Section",
-		Rule:    "New instruction",
-	}
+			if tc.existing != nil {
+				writeTestRuleFile(t, path, tc.existing)
+			}
 
-	err := service.AddInstruction(path, newInstruction)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+			configSvc := &fullConfigService{
+				loadFunc: func(p string) (*RuleFile, error) {
+					data, err := os.ReadFile(p)
+					if err != nil {
+						return nil, err
+					}
+					var r RuleFile
+					if err := json.Unmarshal(data, &r); err != nil {
+						return nil, err
+					}
+					return &r, nil
+				},
+				saveFunc: func(p string, r *RuleFile) error {
+					data, err := json.MarshalIndent(r, "", "  ")
+					if err != nil {
+						return err
+					}
+					return os.WriteFile(p, data, 0644)
+				},
+			}
+			service := &DefaultRuleService{configService: configSvc}
 
-	// Verify file was updated
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("failed to read file: %v", err)
-	}
+			err := service.AddInstruction(path, tc.instruction)
 
-	var loaded RuleFile
-	if err := json.Unmarshal(data, &loaded); err != nil {
-		t.Fatalf("failed to parse file: %v", err)
-	}
-
-	if len(loaded.Instructions) != 2 {
-		t.Fatalf("expected 2 instructions, got %d", len(loaded.Instructions))
-	}
-
-	if loaded.Instructions[0].Rule != "Existing instruction" {
-		t.Errorf("first instruction: got %q, want 'Existing instruction'", loaded.Instructions[0].Rule)
-	}
-
-	if loaded.Instructions[1].Rule != "New instruction" {
-		t.Errorf("second instruction: got %q, want 'New instruction'", loaded.Instructions[1].Rule)
+			if tc.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !tc.wantErr {
+				data, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatalf("read file: %v", err)
+				}
+				var loaded RuleFile
+				if err := json.Unmarshal(data, &loaded); err != nil {
+					t.Fatalf("parse file: %v", err)
+				}
+				if len(loaded.Instructions) != len(tc.wantRules) {
+					t.Fatalf("instruction count: got %d, want %d", len(loaded.Instructions), len(tc.wantRules))
+				}
+				for i, want := range tc.wantRules {
+					if loaded.Instructions[i].Rule != want {
+						t.Errorf("instruction[%d]: got %q, want %q", i, loaded.Instructions[i].Rule, want)
+					}
+				}
+			}
+		})
 	}
 }
 

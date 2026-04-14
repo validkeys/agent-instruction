@@ -83,12 +83,6 @@ func ValidatePath(path string, baseDir string) error {
 	return nil
 }
 
-// ValidatePathSafe is a convenience wrapper that returns nil for valid paths
-// and returns an error for invalid/unsafe paths
-func ValidatePathSafe(path string, baseDir string) error {
-	return ValidatePath(path, baseDir)
-}
-
 // IsSymlink checks if a path is a symbolic link
 func IsSymlink(path string) (bool, error) {
 	info, err := os.Lstat(path)
