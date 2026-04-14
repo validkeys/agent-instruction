@@ -37,6 +37,31 @@ go install
 agent-instruction --version
 ```
 
+### Download Binary (Recommended)
+
+Download a pre-built binary from the [latest release](https://github.com/validkeys/agent-instruction/releases/latest):
+
+**macOS (Apple Silicon)**
+```bash
+curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-darwin-arm64 \
+  -o /usr/local/bin/agent-instruction
+chmod +x /usr/local/bin/agent-instruction
+```
+
+**macOS (Intel)**
+```bash
+curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-darwin-amd64 \
+  -o /usr/local/bin/agent-instruction
+chmod +x /usr/local/bin/agent-instruction
+```
+
+**Linux (amd64)**
+```bash
+curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-linux-amd64 \
+  -o /usr/local/bin/agent-instruction
+chmod +x /usr/local/bin/agent-instruction
+```
+
 ### Install via Go
 
 ```bash
