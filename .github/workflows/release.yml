@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binaries
+        run: |
+          # macOS amd64
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/agent-instruction-darwin-amd64 ./cmd/agent-instruction
+
+          # macOS arm64
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/agent-instruction-darwin-arm64 ./cmd/agent-instruction
+
+          # Linux amd64
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/agent-instruction-linux-amd64 ./cmd/agent-instruction
+
+          # Linux arm64
+          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/agent-instruction-linux-arm64 ./cmd/agent-instruction
+
+      - name: Create checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+
+      - name: Create release archives
+        run: |
+          cd dist
+
+          # macOS amd64
+          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz agent-instruction-darwin-amd64
+
+          # macOS arm64
+          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz agent-instruction-darwin-arm64
+
+          # Linux amd64
+          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz agent-instruction-linux-amd64
+
+          # Linux arm64
+          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz agent-instruction-linux-arm64
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## Installation
+
+          ### macOS
+
+          **Apple Silicon (M1/M2/M3):**
+          ```bash
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz | tar xz
+          sudo mv agent-instruction-darwin-arm64 /usr/local/bin/agent-instruction
+          sudo chmod +x /usr/local/bin/agent-instruction
+          ```
+
+          **Intel:**
+          ```bash
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz | tar xz
+          sudo mv agent-instruction-darwin-amd64 /usr/local/bin/agent-instruction
+          sudo chmod +x /usr/local/bin/agent-instruction
+          ```
+
+          ### Linux
+
+          **ARM64:**
+          ```bash
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz | tar xz
+          sudo mv agent-instruction-linux-arm64 /usr/local/bin/agent-instruction
+          sudo chmod +x /usr/local/bin/agent-instruction
+          ```
+
+          **AMD64:**
+          ```bash
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz | tar xz
+          sudo mv agent-instruction-linux-amd64 /usr/local/bin/agent-instruction
+          sudo chmod +x /usr/local/bin/agent-instruction
+          ```
+
+          ### Verify Installation
+
+          ```bash
+          agent-instruction --version
+          ```
+
+          ## What's Changed
+
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.VERSION }}/CHANGELOG.md) for detailed changes.
+
+          ## Documentation
+
+          - [README](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.VERSION }}/README.md)
+          - [Commands Reference](https://github.com/${{ github.repository }}/tree/${{ steps.version.outputs.VERSION }}/docs/commands)
+          - [Examples](https://github.com/${{ github.repository }}/tree/${{ steps.version.outputs.VERSION }}/examples)
+
+          **Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ steps.version.outputs.VERSION }}
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/checksums.txt
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
