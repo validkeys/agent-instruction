@@ -43,23 +43,34 @@ Download a pre-built binary from the [latest release](https://github.com/validke
 
 **macOS (Apple Silicon)**
 ```bash
-curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-darwin-arm64 \
-  -o /usr/local/bin/agent-instruction
-chmod +x /usr/local/bin/agent-instruction
+mkdir -p ~/.local/bin
+curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-darwin-arm64.tar.gz \
+  | tar xz -C ~/.local/bin
+export PATH="$HOME/.local/bin:$PATH"  # add to ~/.zshrc to persist
 ```
 
 **macOS (Intel)**
 ```bash
-curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-darwin-amd64 \
-  -o /usr/local/bin/agent-instruction
-chmod +x /usr/local/bin/agent-instruction
+mkdir -p ~/.local/bin
+curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-darwin-amd64.tar.gz \
+  | tar xz -C ~/.local/bin
+export PATH="$HOME/.local/bin:$PATH"  # add to ~/.zshrc to persist
 ```
 
 **Linux (amd64)**
 ```bash
-curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-linux-amd64 \
-  -o /usr/local/bin/agent-instruction
-chmod +x /usr/local/bin/agent-instruction
+mkdir -p ~/.local/bin
+curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-linux-amd64.tar.gz \
+  | tar xz -C ~/.local/bin
+export PATH="$HOME/.local/bin:$PATH"  # add to ~/.bashrc to persist
+```
+
+**Linux (arm64)**
+```bash
+mkdir -p ~/.local/bin
+curl -L https://github.com/validkeys/agent-instruction/releases/latest/download/agent-instruction-linux-arm64.tar.gz \
+  | tar xz -C ~/.local/bin
+export PATH="$HOME/.local/bin:$PATH"  # add to ~/.bashrc to persist
 ```
 
 ### Install via Go

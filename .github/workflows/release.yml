@@ -51,17 +51,24 @@ jobs:
         run: |
           cd dist
 
-          # macOS amd64
-          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz agent-instruction-darwin-amd64
+          # Rename platform binaries to the canonical name for clean extraction
+          cp agent-instruction-darwin-amd64 agent-instruction
+          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz agent-instruction
+          cp agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz agent-instruction-darwin-amd64.tar.gz
 
-          # macOS arm64
-          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz agent-instruction-darwin-arm64
+          cp agent-instruction-darwin-arm64 agent-instruction
+          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz agent-instruction
+          cp agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz agent-instruction-darwin-arm64.tar.gz
 
-          # Linux amd64
-          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz agent-instruction-linux-amd64
+          cp agent-instruction-linux-amd64 agent-instruction
+          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz agent-instruction
+          cp agent-instruction-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz agent-instruction-linux-amd64.tar.gz
 
-          # Linux arm64
-          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz agent-instruction-linux-arm64
+          cp agent-instruction-linux-arm64 agent-instruction
+          tar czf agent-instruction-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz agent-instruction
+          cp agent-instruction-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz agent-instruction-linux-arm64.tar.gz
+
+          rm agent-instruction
 
       - name: Generate release notes
         id: release_notes
@@ -73,32 +80,32 @@ jobs:
 
           **Apple Silicon (M1/M2/M3):**
           ```bash
-          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz | tar xz
-          sudo mv agent-instruction-darwin-arm64 /usr/local/bin/agent-instruction
-          sudo chmod +x /usr/local/bin/agent-instruction
+          mkdir -p ~/.local/bin
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz | tar xz -C ~/.local/bin
+          export PATH="$HOME/.local/bin:$PATH"  # add to ~/.zshrc to persist
           ```
 
           **Intel:**
           ```bash
-          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz | tar xz
-          sudo mv agent-instruction-darwin-amd64 /usr/local/bin/agent-instruction
-          sudo chmod +x /usr/local/bin/agent-instruction
+          mkdir -p ~/.local/bin
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz | tar xz -C ~/.local/bin
+          export PATH="$HOME/.local/bin:$PATH"  # add to ~/.zshrc to persist
           ```
 
           ### Linux
 
           **ARM64:**
           ```bash
-          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz | tar xz
-          sudo mv agent-instruction-linux-arm64 /usr/local/bin/agent-instruction
-          sudo chmod +x /usr/local/bin/agent-instruction
+          mkdir -p ~/.local/bin
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz | tar xz -C ~/.local/bin
+          export PATH="$HOME/.local/bin:$PATH"  # add to ~/.bashrc to persist
           ```
 
           **AMD64:**
           ```bash
-          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz | tar xz
-          sudo mv agent-instruction-linux-amd64 /usr/local/bin/agent-instruction
-          sudo chmod +x /usr/local/bin/agent-instruction
+          mkdir -p ~/.local/bin
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/agent-instruction-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz | tar xz -C ~/.local/bin
+          export PATH="$HOME/.local/bin:$PATH"  # add to ~/.bashrc to persist
           ```
 
           ### Verify Installation
