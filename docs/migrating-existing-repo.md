@@ -220,6 +220,16 @@ This is the primary pain point agent-instruction solves. Global rules go in `.ag
 
 If your `CLAUDE.md` contains Claude-specific behavioral instructions and your `AGENTS.md` contains different content for other agents, keep them as separate instruction sets and use the `frameworks` field to generate the right file for each. If the content is identical (most common case), a single rule set generates both.
 
+## Real-World Example
+
+The agent-instruction repo manages its own `CLAUDE.md` using this exact approach — the tool dog-foods itself. The resulting structure is a useful reference:
+
+- **`.agent-instruction/rules/global.json`** — five behavioral guidelines (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution, Style Anchors)
+- **`agent-instruction.json`** — root package config that adds a project context instruction
+- **`CLAUDE.md`** — custom preamble and footer live outside the markers; all rules are generated
+
+See the [Managing AI Context](../README.md#managing-ai-context) section of the main README for the workflow.
+
 ## See Also
 
 - [Configuration Reference](configuration.md)

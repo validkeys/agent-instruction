@@ -1,0 +1,9 @@
+{
+  "title": "agent-instruction Project",
+"instructions": [
+    {
+      "heading": "Project Context",
+      "rule": "This is the agent-instruction tool — it manages CLAUDE.md and AGENTS.md files from centralized JSON rule files stored in .agent-instruction/rules/."
+    }
+  ]
+}

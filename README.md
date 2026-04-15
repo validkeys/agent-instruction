@@ -666,6 +666,41 @@ chmod 644 CLAUDE.md
 
 ## Development
 
+### Managing AI Context
+
+This repo manages its own `CLAUDE.md` using agent-instruction — we dog-food the tool on itself.
+
+**Source files:**
+
+```
+.agent-instruction/
+├── config.json                 # frameworks: ["claude"], packages: ["."]
+└── rules/
+    └── global.json             # All five behavioral guidelines
+agent-instruction.json          # Root package config (project context)
+CLAUDE.md                       # Generated — do not edit inside the markers
+```
+
+The `CLAUDE.md` in this repo has two zones:
+
+- **Outside the markers** — a custom preamble and closing meta-line that are hand-authored and preserved on every rebuild.
+- **Inside `<!-- BEGIN AGENT-INSTRUCTION -->` / `<!-- END AGENT-INSTRUCTION -->`** — generated from the JSON sources; edits here will be overwritten.
+
+**To update the AI context:**
+
+```bash
+# Edit the rule source
+vim .agent-instruction/rules/global.json
+
+# Regenerate CLAUDE.md
+agent-instruction build
+
+# Verify and commit
+git diff CLAUDE.md
+git add .agent-instruction/ agent-instruction.json CLAUDE.md
+git commit -m "docs: update AI context rules"
+```
+
 ### Building from Source
 
 ```bash

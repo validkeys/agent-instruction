@@ -4,6 +4,7 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
+<!-- BEGIN AGENT-INSTRUCTION -->
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
@@ -87,6 +88,14 @@ During development:
   - Complex algorithms that need clear documentation
 
 Format suggestions as: "Candidate for new style anchor: [pattern-name.md] - [one sentence why]"
+
+Do not update CLAUDE.md directly. Only use agent-instruction skill
+
+## Project Context
+
+This is the agent-instruction tool — it manages CLAUDE.md and AGENTS.md files from centralized JSON rule files stored in .agent-instruction/rules/.
+
+<!-- END AGENT-INSTRUCTION -->
 
 ---
 
